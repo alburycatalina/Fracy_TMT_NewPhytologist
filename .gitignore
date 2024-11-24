@@ -2,6 +2,8 @@
 .sky 
 .png
 .pdf
+.DS_Store
+
 
 # History files
 .Rhistory
