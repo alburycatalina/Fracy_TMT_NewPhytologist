@@ -1,4 +1,4 @@
-# Script for functional annotation of DE proteins from TMT experiment 
+# Script for functional annotation of DE proteins from TMT experiment with KEGG values
 
 
 # Setup :-) ---------------------------------------------------------------
@@ -17,11 +17,16 @@ library(ggpubr)
 library(kableExtra)
 library(stringr)
 library(data.table)
+library(grid)
 
 # Installing KEGGREST
 # BiocManager::install("KEGGREST")
 
-# 4,B12 vs 4,noB12  (B12 response)
+
+# Load DE Data ------------------------------------------------------------
+
+
+# Load in data with hits of DE'd proteins 4,B12 vs 4,noB12  (B12 response)
 B12_hits <- read.csv("hits_4_noB12_20102021.csv") |>
   mutate(Description = str_remove(Description, fixed(pattern = "[Fragilariopsis cylindrus CCMP1102]")),
          DE_origin = "B12")
@@ -40,7 +45,8 @@ mutate(Description = str_remove(Description, fixed(pattern = "[Fragilariopsis cy
 
 
 # Merge hit lists into 1, only including significantly DE'd proteins (Pvalues < .05)
-hits_list <- rbind(B12_hits, temp_hits, int_hits) |> filter(PValue < .05) |>
+hits_list <- rbind(B12_hits, temp_hits, int_hits) |> 
+  filter(PValue < .05) |>
   # Make a column that indicates DE direction (up or downregulated; positive or negative fold change)
   mutate(de_dir = fifelse(logFC < 0,
                           -1,
@@ -68,30 +74,25 @@ prot_data_ids <- left_join(hits_list, prot_info, by = "accession") |>
 KEGGlist_frag <- as.data.frame(keggList("fcy"))
 frag_kegg_nos_raw <- read.csv("frag_kegg_no.csv")
 
+# Parse columns by separators
 frag_kegg_nos <- colsplit(frag_kegg_nos_raw$Name," ",c("id","kegg_id"))
 
+temp <- colsplit(frag_kegg_nos$kegg_id," ", c("K_no","description"))
+database <- cbind(frag_kegg_nos, temp)
 
-thing <- colsplit(frag_kegg_nos$kegg_id," ", c("thing","description"))
-database <- cbind(frag_kegg_nos, thing)
+# Delete row if no KO number is available
+frag_kegg <- database[!grepl("no", database$K_no),] |> 
+  
+  # Remove unneeded col
+  select(-c("kegg_id"))
 
-# Delete row if no KO number is available 
-frag_kegg <- database[!grepl("no", database$thing),]
 
-# Remove second unneeded column 
-frag_kegg <- frag_kegg[,-c(2)]
+# Produce a dataframe matching protein id's and kegg numbers
+frag_kegg_database <- frag_kegg |> mutate(colsplit(id, 
+                                            pattern = "_",
+                                            names = c("fracy","proteinId"))) |> 
+  select(K_no, proteinId)
 
-#Rename column with K numbers
-colnames(frag_kegg)[2] <- "K_no" 
-
-# Isolate protein Id's from column
-prot_id_df <- colsplit(frag_kegg$id,"_",c("fracy","prot_id"))
-
-# Add back into df
-frag_kegg_database <- cbind(prot_id_df$prot_id, frag_kegg)
-
-# Remove unneeded 2nd column and rename to produce a dataframe matching protein id's and kegg numbers
-colnames(frag_kegg_database)[1] <- "proteinId"
-frag_kegg_database <- frag_kegg_database[,-c(2,4)]
 
 # Join protein data and keg no's
 frag_kegg_final <- left_join(prot_data_ids, frag_kegg_database, by = "proteinId")
@@ -149,16 +150,13 @@ write.csv(int_table, file = "int_table_TMT_29102021.csv")
 sum(!complete.cases(frag_kegg_final$K_no))/nrow(frag_kegg_final)
 
 # Load in annotation text at KEGG levels
-kegg_annotation <- read.csv("KEGG2.csv")
+kegg_annotation <- read.csv("KEGG2.csv") |> 
+  # Rename column to match
+  rename("K_no" = "KO")
 
-# Change column name
-colnames(kegg_annotation)[which(names(kegg_annotation) == "KO")] <- "K_no"
 
 # Match by KO's
-frag_kegg_annotated <- left_join(frag_kegg_final, kegg_annotation, by = "K_no")
-
-# Select only useful cols
-kegg_annotated <- frag_kegg_annotated |> 
+kegg_annotated <- left_join(frag_kegg_final, kegg_annotation, by = "K_no") |> 
   select(accession, 
          proteinId, 
          Description, 
@@ -175,23 +173,27 @@ kegg_annotated <- frag_kegg_annotated |>
          E, 
          FF,
          G, 
-         H)
+         H) |> 
+  # Change NA's to unknown
+  mutate(A = ifelse(is.na(A), 
+                    'Unknown', A))
 
 
 # Plot for B12 ------------------------------------------------------------
 
 # Create a table with annotated proteins
-B12_de_annotated <- kegg_annotated |>  filter(DE_origin == "B12") |> 
-  mutate(A = ifelse(is.na(A), 
-                    'Unknown', A))
+B12_de_annotated <- kegg_annotated |>  filter(DE_origin == "B12")
 
 
+# Group by A-level annotations
+B12_de_annotated_A <- B12_de_annotated |> 
+  group_by(accession, A) |> 
+  dplyr::summarise(logFC= first(logFC), logCPM = first(logCPM))
 
-THING <- B12_de_annotated %>% group_by(accession, A) %>% dplyr::summarise(logFC= first(logFC), logCPM = first(logCPM))
-
-
+# Grab a list of unique accession numbers
 b12_accessions <- unique(B12_de_annotated$accession)
 
+# List of names used in plot
 b12_names <- c(
   "MetE",
   "protoporphyrin IX Mg-chelatase subunit D",
@@ -221,17 +223,19 @@ b12_names <- c(
 )
 
 # Join in dataframe
-b12_labels_df <- as.data.frame(cbind(b12_accessions, b12_names))
+b12_labels_df <- as.data.frame(cbind(b12_accessions, b12_names)) |> 
+  rename("accession" = "b12_accessions",
+        "label" = "b12_names")
 
-colnames(b12_labels_df) <- c("accession", "label")
 
-b12_de_annotated_labeled <- THING |> 
+b12_de_annotated_labeled <-
+  B12_de_annotated_A |> 
   left_join(b12_labels_df, by = "accession")
 
 # add chld 
-g1 = subset(int_de_annotated_labeled, accession == "OEU10229.1")
+g1 = subset(b12_de_annotated_labeled, accession == "OEU10229.1")
 
-g2 = subset(int_de_annotated_labeled, accession == "OEU11144.1")
+g2 = subset(b12_de_annotated_labeled, accession == "OEU11144.1")
 
 
 b12_scatter <- ggplot(b12_de_annotated_labeled, aes(x = logCPM, y = logFC, color =
@@ -239,11 +243,11 @@ b12_scatter <- ggplot(b12_de_annotated_labeled, aes(x = logCPM, y = logFC, color
   geom_point(size = 5, alpha = .50) +
   theme_classic() +
   theme(text = element_text(size = 20)) +
-  xlab(expression('Log'[2] * ' Abundance')) +
+  xlab(expression('Spectral Abundance')) +
   ylab(expression('Log'[2] * ' Fold Change')) +
   scale_color_manual(values = wes_palette("Royal2"), name = "Pathway") +
   geom_text_repel(data = g1, 
-                  label = "ChlD", 
+                  label = "ChlD2", 
                   vjust = -4, 
                   show.legend = FALSE, 
                   size = 5, 
@@ -269,23 +273,30 @@ b12_scatter <- ggplot(b12_de_annotated_labeled, aes(x = logCPM, y = logFC, color
 
 # Plot for temp ------------------------------------------------------------
 
-temp_de_annotated <- kegg_annotated %>% filter(DE_origin == "temp")
-temp_de_annotated$A <- ifelse(is.na(temp_de_annotated$A), 
-                              'Unknown', temp_de_annotated$A)
+# Grab temp de's 
+temp_de_annotated <- kegg_annotated |> 
+  filter(DE_origin == "temp")
 
+
+# List of labels for figure
 temp_label <- c("Unknown Protein (ID: 271832)", "Unknown Protein (ID: 235337)")
 
-temp_scatter <- ggplot(temp_de_annotated, aes(x = logCPM, y = logFC, color =
-                                                A)) +
+# Temp scatter plot 
+temp_scatter <- ggplot(temp_de_annotated, 
+                       aes(x = logCPM, 
+                           y = logFC, 
+                           color = A)) +
   geom_point(size = 5, alpha = .50) +
   theme_classic() +
   theme(text = element_text(size = 20)) +
-  xlab(expression('Log'[2] * ' Abundance')) +
+  xlab(expression('Spectral Abundance')) +
   ylab(expression('Log'[2] * ' Fold Change')) +
   scale_color_manual(values = wes_palette("Royal2"), name = "Pathway") +
   geom_text_repel(
-    aes(label = ifelse(logFC > 2.5 & logCPM > 8, temp_label, '')),
-    
+    aes(label = ifelse(logFC > 2.5 & logCPM > 8,
+                       temp_label,
+                       '')),
+
     hjust = 0,
     vjust = 0,
     show.legend =  FALSE,
@@ -311,9 +322,8 @@ temp_scatter <- ggplot(temp_de_annotated, aes(x = logCPM, y = logFC, color =
 
 
 # Plot for int DE proteins ------------------------------------------------
-int_de_annotated <- kegg_annotated %>% filter(DE_origin == "int")
-int_de_annotated$A <- ifelse(is.na(int_de_annotated$A), 
-                             'Unknown', int_de_annotated$A)
+int_de_annotated <- kegg_annotated |>  filter(DE_origin == "int")
+
 
 # Create table with shorter alt names for important proteins (logFC >/< 2.5; logCPM > 12)
 accession <- c("OEU18748.1", "OEU11144.1", "OEU08040.1", "OEU11214.1", "OEU19288.1", "OEU15214.1", "OEU08856.1", "OEU22459.1", "OEU13453.1", "OEU15467.1", "OEU16276.1", "OEU11005.1")
@@ -322,8 +332,8 @@ names <- c("Unknown Protein (ID: 182880)", "MetE", "Unknown Protein (ID: 271832)
 
 labels_df <- as.data.frame(cbind(accession, names))
 
-
-int_de_annotated_labeled <- int_de_annotated %>% left_join(labels_df, by = "accession")
+int_de_annotated_labeled <- int_de_annotated |>  
+  left_join(labels_df, by = "accession")
 
 # Remove second MetE enrty to label
 int_de_annotated_labeled <- int_de_annotated_labeled[-c(3),]
@@ -332,97 +342,124 @@ int_de_annotated_labeled <- int_de_annotated_labeled[-c(3),]
 g1 <- subset(int_de_annotated_labeled, accession == "OEU10229.1")
 
 # Plotty plotty 
-int_scatter <- ggplot(int_de_annotated_labeled, aes(x=logCPM, y=logFC, color=A)) +
+int_scatter <- ggplot(int_de_annotated_labeled, aes(x = logCPM, y = logFC, color =
+                                                      A)) +
   geom_point(size = 5, alpha = .50) +
   theme_classic() +
   theme(text = element_text(size = 20)) +
-  xlab(expression('Log'[2]*' Abundance')) +
-  ylab(expression('Log'[2]*' Fold Change')) +
-  scale_color_manual(values = wes_palette("Royal2"), name = "Pathway")+
-  geom_text_repel(aes(label=ifelse(logFC < -2.5 & logCPM > 8,as.character(names),'')),
-                  #hjust=0,
-                  #   vjust=0, 
-                  show.legend =  FALSE, 
-                  nudge_y = -1, 
-                  nudge_x = 1,
-                  size = 5) +
-  geom_text_repel(aes(label=ifelse(logFC > 2.5& logCPM > 8,
-                                   as.character(names),'')),
-                  #        hjust=0,
-                  #vjust=0, 
-                  show.legend =  FALSE, 
-                  nudge_y = 1, 
-                  nudge_x = 1.75,
-                  size = 5) +  
-  geom_text_repel(data = g1, 
-                  label = "ChlD", 
-                  vjust = -1.5, 
-                  hjust = -.75,
-                  show.legend = FALSE, 
-                  size = 5, 
-                  nudge_x = 1.5) +
-  xlim(7,20) +
-  ylim(-7, 7)+
-  ggtitle(expression("-B"[12]*" and +12° C")) +
-  theme(plot.title = element_text(hjust=0.5), 
-    panel.background = element_rect(fill = "transparent"), # bg of the panel
-    plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
-    panel.grid.major = element_blank(), # get rid of major grid
-    panel.grid.minor = element_blank(), # get rid of minor grid
-    legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+  xlab(expression('Spectral Abundance')) +
+  ylab(expression('Log'[2] * ' Fold Change')) +
+  scale_color_manual(values = wes_palette("Royal2"), name = "Pathway") +
+  geom_text_repel(
+    aes(label = ifelse(
+      logFC < -2.5 & logCPM > 8, as.character(names), ''
+    )),
+    #hjust=0,
+    #   vjust=0,
+    show.legend =  FALSE,
+    nudge_y = -1,
+    nudge_x = 1,
+    size = 5
+  ) +
+  geom_text_repel(
+    aes(label = ifelse(
+      logFC > 2.5 & logCPM > 8, as.character(names), ''
+    )),
+    #        hjust=0,
+    #vjust=0,
+    show.legend =  FALSE,
+    nudge_y = 1,
+    nudge_x = 1.75,
+    size = 5
+  ) +
+  geom_text_repel(
+    data = g1,
+    label = "ChlD2",
+    vjust = -1.5,
+    hjust = -.75,
+    show.legend = FALSE,
+    size = 5,
+    nudge_x = 1.5
+  ) +
+  xlim(7, 20) +
+  ylim(-7, 7) +
+  ggtitle(expression("-B"[12] * " and +12° C")) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.background = element_rect(fill = "transparent"),
+    # bg of the panel
+    plot.background = element_rect(fill = "transparent", color = NA),
+    # bg of the plot
+    panel.grid.major = element_blank(),
+    # get rid of major grid
+    panel.grid.minor = element_blank(),
+    # get rid of minor grid
+    legend.background = element_rect(fill = "transparent"),
+    # get rid of legend bg
     legend.box.background = element_rect(fill = "transparent") # get rid of legend panel bg
   )
 
 
-plot <- ggarrange(b12_scatter, temp_scatter, int_scatter, ncol = 3, nrow = 1, common.legend = TRUE, legend = "bottom")
+plot <- ggarrange(b12_scatter, 
+                  temp_scatter, 
+                  int_scatter, 
+                  ncol = 3, 
+                  nrow = 1, 
+                  common.legend = TRUE, 
+                  legend = "bottom")
 
-ggsave(plot, filename = "scatter_all_2_24112024.png",  bg = "transparent", width = 16, height= 7, units = "in")
+ggsave(plot, 
+       filename = "scatter_all_2_24112024.png",  
+       bg = "transparent", 
+       width = 16, 
+       height= 7, 
+       units = "in")
 
 
-# barchart for DE'd proteins showing dist of functional annotations -------------------------------------------------
+# Barchart for DE'd proteins showing dist of functional annotations
+# Orders of these aren't working -------------------------------------------------
 
 
 # Calculate counts
-counts_df <- frag_kegg_annotated %>% dplyr::count(DE_origin, A, B)
+counts_df <- kegg_annotated |>  
+  dplyr::count(DE_origin, 
+               A, 
+               B) |> 
+  mutate(B = ifelse(is.na(B), 
+                'No annotation available',
+                B)) 
+
+counts_df_B12 <- counts_df |> 
+  filter(DE_origin == "B12")
+
 
 # Get list of unique KEGG level B annotations from the counts
 b_annotations <- unique(counts_df$B)
 
 
-# Change NA's to text
-counts_df$B <- ifelse(is.na(counts_df$B), 
-                      'No annotation available', counts_df$B)
-counts_df$A <- ifelse(is.na(counts_df$A), 
-                      'Unknown', counts_df$A)
-
-
-# Filter out for B12 obs
-counts_df_B12 <- filter(counts_df, DE_origin == "B12")
-
 # Add missing rows 
-missing_B12 <- setdiff(b_annotations,counts_df_B12$B)
-to_add_B12 <- filter(counts_df, B %in% missing_B12)
-to_add_B12<- to_add_B12 %>% distinct(B, .keep_all = TRUE)
-to_add_B12$DE_origin <- "B12"
-to_add_B12$n <- 0
-counts_df_B12 <- rbind(counts_df_B12, to_add_B12)
+missing_B12 <- setdiff(b_annotations,
+                       counts_df_B12$B)
+
+to_add_B12 <- filter(counts_df, B %in% missing_B12) |> 
+  distinct(B, .keep_all = TRUE) |> 
+  mutate(DE_origin = "B12",
+         n = 0)
+  
+
+
+counts_df_B12 <- rbind(counts_df_B12, 
+                       to_add_B12)
 
 
 # Add a row with total of all counts
 sum_row <- c("B12", NA ,"Total", sum(counts_df_B12$n))
-counts_df_B12 <- rbind(counts_df_B12, sum_row)
-counts_df_B12$n <- as.numeric(counts_df_B12$n )
 
+counts_df_B12 <- counts_df_B12 |> 
+  rbind(sum_row) |> 
+  mutate(n = as.numeric(n)) |> 
+  arrange(A, B) 
 
-# Reorder obs 
-counts_df_B12 <- counts_df_B12[
-   with(counts_df_B12, order(A, B)),]
-
-# Make text wrapping
-counts_df_B12$B <- stringr::str_wrap(counts_df_B12$B, 35)
-
-# lock in factor level order
-counts_df_B12$B <- factor(counts_df_B12$B, levels = counts_df_B12$B)
 
 # Load color pallette
 cols <- wes_palette("Royal2")
@@ -431,9 +468,10 @@ cols <- wes_palette("Royal2")
 # Create list of lables to exlude 0's from geom_text argument
 num_labels_b12 <- counts_df_B12$n
 num_labels_b12[num_labels_b12 == "0"] <- " "
-
-
 counts_df_B12$n[22:23] <- 0
+
+# lock in factor level order
+counts_df_B12$B <- factor(counts_df_B12$B, levels = counts_df_B12$B)
 
 # Plot B12 !!! :-)
 B12_plot <- ggplot(counts_df_B12, aes(y = B, x = n, fill = A)) + 
@@ -461,24 +499,25 @@ counts_df_temp <- filter(counts_df, DE_origin == "temp")
 
 # Add missing rows 
 missing_temp <- setdiff(b_annotations,counts_df_temp$B)
-to_add_temp <- filter(counts_df, B %in% missing_temp)
-to_add_temp<- to_add_temp %>% distinct(B, .keep_all = TRUE)
-to_add_temp$DE_origin <- "temp"
-to_add_temp$n <- 0
+to_add_temp <- filter(counts_df, B %in% missing_temp) |>  
+  distinct(B, .keep_all = TRUE) |> 
+  mutate(DE_origin = "temp", 
+         n = 0)
+
 counts_df_temp <- rbind(counts_df_temp, to_add_temp)
 
 
 # Add a row with total of all counts
 sum_row <- c("temp", NA ,"Total", sum(counts_df_temp$n))
-counts_df_temp <- rbind(counts_df_temp, sum_row)
-counts_df_temp$n <- as.numeric(counts_df_temp$n )
+counts_df_temp <- rbind(counts_df_temp, sum_row) |> 
+  mutate(n = as.numeric(n))
+
 
 
 # # Reorder obs 
-counts_df_temp <- counts_df_temp %>% arrange(A, B)
-
-# Make text wrapping
-counts_df_temp$B <- stringr::str_wrap(counts_df_temp$B, 35)
+counts_df_temp <- counts_df_temp |>  
+  arrange(A, B) |> 
+  mutate(B = factor(B, levels = B))
 
 
 
@@ -493,24 +532,26 @@ num_labels_temp[num_labels_temp == "0"] <- " "
 
 counts_df_temp$n[22:23] <- 0
 
-# lock in factor level order
-counts_df_temp$B <- factor(counts_df_temp$B, levels = counts_df_temp$B)
 
 # Plot temp !!! :-)
-temp_plot <- ggplot(counts_df_temp, aes(y = B, x = n, fill = A)) + 
-  geom_bar(position="dodge", stat="identity") +
+temp_plot <- ggplot(counts_df_temp, aes(y = B, 
+                                        x = n, 
+                                        fill = A)) +
+  geom_bar(position = "dodge", 
+           stat = "identity") +
   theme_classic() +
   ylab(NULL) +
   xlab(NULL) +
   scale_y_discrete(limits = rev(levels(counts_df_temp$B))) +
   scale_fill_manual("Pathway", values = cols) +
-  geom_text(aes(label= num_labels_temp), position=position_dodge(width=0.9), 
-            hjust=-.45, size = 8) +
-  theme(plot.title = element_text(size = 20)) + 
-  theme(text = element_text(size=40),
-       axis.text.y =element_blank()
-  ) +
-  xlim(0,30) +
+  geom_text(
+    aes(label = num_labels_temp),
+    position = position_dodge(width = 0.9),
+    hjust = -.45,
+    size = 8) +
+  theme(plot.title = element_text(size = 20)) +
+  theme(text = element_text(size = 40), axis.text.y = element_blank()) +
+  xlim(0, 30) +
   theme(plot.margin = unit(c(3, 0, 3, 0), "cm"))
 
 
@@ -525,23 +566,28 @@ counts_df_int <- filter(counts_df, DE_origin == "int")
 # Add missing rows 
 missing_int <- setdiff(b_annotations,counts_df_int$B)
 to_add_int <- filter(counts_df, B %in% missing_int)
-to_add_int <- to_add_int %>% distinct(B, .keep_all = TRUE)
-to_add_int$DE_origin <- "int"
-to_add_int$n <- 0
+to_add_int <- to_add_int |> distinct(B, .keep_all = TRUE) |> 
+  mutate(DE_origin = "int",
+         n = 0)
+
 counts_df_int <- rbind(counts_df_int, to_add_int)
 
 
 # Add a row with total of all counts
 sum_row <- c("int", NA ,"Total", sum(counts_df_int$n))
-counts_df_int <- rbind(counts_df_int, sum_row)
-counts_df_int$n <- as.numeric(counts_df_int$n )
+counts_df_int <- rbind(counts_df_int, sum_row) |> 
+  mutate(n = as.numeric(n))
+
 
 
 # # Reorder obs 
-counts_df_int <- counts_df_int %>% arrange(A, B)
+counts_df_int <- counts_df_int |> 
+  arrange(A, B) |> 
+  # Wrap text descriptions
+  mutate(B = factor(B,
+                    levels = B))
 
-# Make text wrapping
-counts_df_int$B <- stringr::str_wrap(counts_df_int$B, 35)
+
 
 
 
@@ -556,8 +602,7 @@ num_labels_int[num_labels_int == "0"] <- " "
 
 counts_df_int$n[22:23] <- 0
 
-# # lock in factor level order
- counts_df_int$B <- factor(counts_df_int$B, levels = counts_df_int$B)
+
 
 
 # Plot int !!! :-)
@@ -572,7 +617,7 @@ int_plot <- ggplot(counts_df_int, aes(y = B, x = n, fill = A)) +
             hjust=-.45, size = 8) +
   theme(plot.title = element_text(size = 20)) + 
   theme(text = element_text(size=40), 
-     #   axis.text.y =element_blank()
+        axis.text.y =element_blank()
         ) +
   theme(plot.margin = unit(c(3, 0, 3, 0), "cm"), legend.position = "none") 
 
@@ -580,11 +625,11 @@ int_plot <- ggplot(counts_df_int, aes(y = B, x = n, fill = A)) +
 ggsave("int_annotation.pdf", width = 24, height = 18, units = "in")
   
 #Make a plot with just x-axis text
-# Dummy values to plot 
-dummy <- data.frame(levels(counts_df_int$B))
-
-
-
-
-
-ggarrange(B12_plot, temp_plot, int_plot, ncol = 3, nrow = 1, common.legend = TRUE)
+annotation_barplot <- ggarrange(B12_plot,
+                                temp_plot,
+                                int_plot, 
+                                ncol = 3, 
+                                nrow = 1,
+                                common.legend = TRUE) + 
+  rremove("ylab") + 
+  rremove("xlab")

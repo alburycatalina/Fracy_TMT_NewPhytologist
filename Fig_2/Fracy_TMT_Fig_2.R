@@ -173,13 +173,15 @@ metE_quota_bg <- ggplot(
 # Arrange MetH/MetE Boxplots
 ggarrange(metH_quota, 
           metE_quota_bg, 
-          ncol = 3,
+          ncol = 2,
           nrow = 1, 
           common.legend = TRUE, 
           legend = "bottom", 
           labels = c("a", "b"),  
           font.label = list(size = 25, 
                             color = "black"))
+
+ggsave("meth_mete_barplots.pdf", width = 12, height = 6, units = "in")
 
 # Transparent Background Figs ---------------------------------------------
 # MetH Plot
@@ -394,7 +396,7 @@ protquota_bp1 <- ggplot(
   ))) +
   theme(axis.text.x = element_blank(), axis.ticks = element_blank()) 
 
-
+ggsave("total_prot_boxplot_S3.pdf", width = 7, height = 6, units = "in")
 
 # Overall Protein t-test  -------------------------------------------------
 
