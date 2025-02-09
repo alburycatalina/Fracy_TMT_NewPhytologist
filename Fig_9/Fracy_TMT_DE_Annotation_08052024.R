@@ -114,7 +114,7 @@ B12_table <- filter(frag_kegg_final, DE_origin == "B12", PValue < .05) |>
          PValue)
 
 write.csv(B12_table, 
-          file = "B12_table_TMT_29102021.csv")
+          file = "B12_table_TMT_08052024.csv")
 
 
 # Temp table
@@ -128,7 +128,7 @@ temp_table <- filter(frag_kegg_final, DE_origin == "temp", PValue < .05) |>
          PValue)
 
 temp_table[is.na(temp_table)] <- "-"
-write.csv(temp_table, file = "temp_table_TMT_29102021.csv")
+write.csv(temp_table, file = "temp_table_TMT_08052024.csv")
 
 #Int table
 int_table <- filter(frag_kegg_final, DE_origin == "int", PValue < .05) |> 
@@ -142,7 +142,7 @@ int_table <- filter(frag_kegg_final, DE_origin == "int", PValue < .05) |>
 
 int_table[is.na(int_table)] <- "-"
 
-write.csv(int_table, file = "int_table_TMT_29102021.csv")
+write.csv(int_table, file = "int_table_TMT_08052024.csv")
 
 
 
@@ -242,7 +242,7 @@ b12_scatter <- ggplot(b12_de_annotated_labeled, aes(x = logCPM, y = logFC, color
                                                A)) +
   geom_point(size = 5, alpha = .50) +
   theme_classic() +
-  theme(text = element_text(size = 20)) +
+   theme(text = element_text(size = 20)) +
   xlab(expression('Spectral Abundance')) +
   ylab(expression('Log'[2] * ' Fold Change')) +
   scale_color_manual(values = wes_palette("Royal2"), name = "Pathway") +
@@ -416,9 +416,7 @@ ggsave(plot,
        units = "in")
 
 
-# Barchart for DE'd proteins showing dist of functional annotations
-# Orders of these aren't working -------------------------------------------------
-
+# Barchart for DE'd proteins showing dist of functional annotations -------------------------------------------------
 
 # Calculate counts
 counts_df <- kegg_annotated |>  
@@ -473,7 +471,9 @@ counts_df_B12$n[22:23] <- 0
 # lock in factor level order
 counts_df_B12$B <- factor(counts_df_B12$B, levels = counts_df_B12$B)
 
-# Plot B12 !!! :-)
+
+# Plot B12 Barchart ~ -----------------------------------------------------
+
 B12_plot <- ggplot(counts_df_B12, aes(y = B, x = n, fill = A)) + 
   geom_bar(position="dodge", stat="identity") +
   theme_classic() +
@@ -481,18 +481,21 @@ B12_plot <- ggplot(counts_df_B12, aes(y = B, x = n, fill = A)) +
   xlab(NULL) +
   scale_y_discrete(limits = rev(levels(counts_df_B12$B))) +
   scale_fill_manual("Pathway", values = cols) +
-  xlim(0,30) +
+  xlim(0,15) +
   geom_text(aes(label= num_labels_b12), position=position_dodge(width=0.9), 
             hjust=-.45, size = 8) +
   theme(plot.title = element_text(size = 20)) + 
-  theme(text = element_text(size=40), legend.position = "none", 
+  theme(text = element_text(size= 20), legend.position = "none", 
         #axis.text.y =element_blank()
         ) +
   theme(plot.margin = unit(c(3, 0, 3, 3), "cm"))
 
+# FIXME
+# Need to save size with it as object
 ggsave("b12_annotation.pdf", width = 24, height = 18, units = "in")
 
-# Temp Plot -------------------------------------------------
+
+# Plot for Temp barchart ~ -------------------------------------------------
 
 # Filter out for temp obs
 counts_df_temp <- filter(counts_df, DE_origin == "temp")
@@ -550,11 +553,12 @@ temp_plot <- ggplot(counts_df_temp, aes(y = B,
     hjust = -.45,
     size = 8) +
   theme(plot.title = element_text(size = 20)) +
-  theme(text = element_text(size = 40), axis.text.y = element_blank()) +
-  xlim(0, 30) +
+#  theme(text = element_text(size = 40), axis.text.y = element_blank()) +
+  xlim(0, 15) +
   theme(plot.margin = unit(c(3, 0, 3, 0), "cm"))
 
-
+# FIXME
+# Save size natively 
 ggsave("temp_annotation.pdf", width = 24, height = 18, units = "in")
 
 # INT Plot -------------------------------------------------
@@ -605,12 +609,15 @@ counts_df_int$n[22:23] <- 0
 
 
 
-# Plot int !!! :-)
+
+# Plot Int barchart ~ -----------------------------------------------------
+
 int_plot <- ggplot(counts_df_int, aes(y = B, x = n, fill = A)) + 
   geom_bar(position="dodge", stat="identity") +
   theme_classic() +
   ylab(NULL) +
   xlab(NULL) +
+  xlim(0,30) +
   scale_y_discrete(limits = rev(levels(counts_df_int$B))) +
   scale_fill_manual("Pathway", values = cols) +
   geom_text(aes(label= num_labels_int), position=position_dodge(width=0.9), 
