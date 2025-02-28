@@ -476,12 +476,9 @@ counts_df_B12$B <- factor(counts_df_B12$B, levels = counts_df_B12$B)
 # Plot B12 Barchart ~ -----------------------------------------------------
 
 # FIXME
-
 # Wishlist - multipanel plot with labels
-# - Figure out sizing (make entire thing taller (1/2 page?) and number font size larger)
 # zebra highlighting in background for functional groups 
-# Contrast check hex for yellow vs black and white 
-# Fix labels in mulitpanel for subscripts on B12 etc 
+# Fix labels in mulitpanel for subscripts on B12 etc
 
 
 B12_plot <- ggplot(counts_df_B12, 
@@ -505,7 +502,7 @@ B12_plot <- ggplot(counts_df_B12,
         #axis.text.y =element_blank()
         ) +
   theme(plot.margin = unit(c(3, 0, 3, 3), "cm")) +
-  xlim(0,10)
+  xlim(0,10) 
 
 
 
@@ -658,18 +655,45 @@ annotation_barplot <- ggarrange(B12_plot,
 
 # Multipanel plot ---------------------------------------------------------
 
+# Annotations for plot labels 
+ann1 <- geom_text(aes(x = 0, 
+                      y = 0, 
+                      label = "-B[12]"),
+                  parse = TRUE, 
+                  size = 6)
 
-ggarrange(B12_plot, 
-          temp_plot, 
-          int_plot, nrow = 1, 
-          ncol = 3, 
-          labels = c("B12", "temp", "int"), 
-          label.x = c(.75, .5, .5),
-          label.y = .975,
-          common.legend = TRUE, 
-          widths = c(3.7,1,3), 
-          legend="bottom"
-          )
+ann2 <- geom_text(aes(x = 0, 
+                      y = 0, 
+                  label = "+12 °C)"),
+                  parse = TRUE, 
+                  size = 6)
+
+ann3 <- geom_text(aes(x =0,
+                      y = 0, 
+                      label = "-B[12] and +12 °C)"),
+                  parse = TRUE, 
+                  size = 6)
+
+# Arrange plots
+# FIXME labels not rendering 
+# Caused by error in `.f()`:
+ggarrange(
+  B12_plot,
+  temp_plot,
+  int_plot,
+  ann1, # cannot convert to grob?? >:(
+  ann2, 
+  ann3,
+  nrow = 2, 
+  ncol = 3,
+    # label.x = c(.75, .5, .5),
+    # label.y = .975,
+    common.legend = TRUE,
+    widths = c(3.7, 1, 3),
+    legend = "bottom"
+  ) 
+
+
 
 ggsave("annotation_barchart.pdf", 
        width = 35, 
