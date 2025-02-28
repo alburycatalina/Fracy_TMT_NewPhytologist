@@ -18,6 +18,7 @@ library(kableExtra)
 library(stringr)
 library(data.table)
 library(grid)
+library(scales)
 
 # Installing KEGGREST
 # BiocManager::install("KEGGREST")
@@ -474,25 +475,38 @@ counts_df_B12$B <- factor(counts_df_B12$B, levels = counts_df_B12$B)
 
 # Plot B12 Barchart ~ -----------------------------------------------------
 
-B12_plot <- ggplot(counts_df_B12, aes(y = B, x = n, fill = A)) + 
-  geom_bar(position="dodge", stat="identity") +
+# FIXME
+
+# Wishlist - multipanel plot with labels
+# - Figure out sizing (make entire thing taller (1/2 page?) and number font size larger)
+# zebra highlighting in background for functional groups 
+# Contrast check hex for yellow vs black and white 
+# Fix labels in mulitpanel for subscripts on B12 etc 
+
+
+B12_plot <- ggplot(counts_df_B12, 
+                   aes(y = B, 
+                       x = n, 
+                       fill = A)) + 
+  geom_bar(position="dodge", 
+           stat="identity") +
   theme_classic() +
   ylab("Functional Annotation") +
   xlab(NULL) +
   scale_y_discrete(limits = rev(levels(counts_df_B12$B))) +
   scale_fill_manual("Pathway", values = cols) +
-  xlim(0,15) +
-  geom_text(aes(label= num_labels_b12), position=position_dodge(width=0.9), 
-            hjust=-.45, size = 8) +
-  theme(plot.title = element_text(size = 20)) + 
-  theme(text = element_text(size= 20), legend.position = "none", 
+  geom_text(aes(label= num_labels_b12),
+            position=position_dodge(width=0.9),
+            hjust=-.45, 
+            size = 8) +
+  theme(axis.text.y = element_text(size = 33),
+        axis.title.y = element_text(size = 38, vjust = 5)) + 
+  theme(text = element_text(size = 20), legend.position = "none", 
         #axis.text.y =element_blank()
         ) +
-  theme(plot.margin = unit(c(3, 0, 3, 3), "cm"))
+  theme(plot.margin = unit(c(3, 0, 3, 3), "cm")) +
+  xlim(0,10)
 
-# FIXME
-# Need to save size with it as object
-ggsave("b12_annotation.pdf", width = 24, height = 18, units = "in")
 
 
 # Plot for Temp barchart ~ -------------------------------------------------
@@ -553,13 +567,13 @@ temp_plot <- ggplot(counts_df_temp, aes(y = B,
     hjust = -.45,
     size = 8) +
   theme(plot.title = element_text(size = 20)) +
-#  theme(text = element_text(size = 40), axis.text.y = element_blank()) +
-  xlim(0, 15) +
+  theme(text = element_text(size = 20), axis.text.y = element_blank()) +
+  xlim(0, 10) +
   theme(plot.margin = unit(c(3, 0, 3, 0), "cm"))
 
 # FIXME
 # Save size natively 
-ggsave("temp_annotation.pdf", width = 24, height = 18, units = "in")
+# ggsave("temp_annotation.pdf", width = 24, height = 18, units = "in")
 
 # INT Plot -------------------------------------------------
 
@@ -623,13 +637,13 @@ int_plot <- ggplot(counts_df_int, aes(y = B, x = n, fill = A)) +
   geom_text(aes(label= num_labels_int), position=position_dodge(width=0.9), 
             hjust=-.45, size = 8) +
   theme(plot.title = element_text(size = 20)) + 
-  theme(text = element_text(size=40), 
+  theme(text = element_text(size=20), 
         axis.text.y =element_blank()
         ) +
   theme(plot.margin = unit(c(3, 0, 3, 0), "cm"), legend.position = "none") 
 
 
-ggsave("int_annotation.pdf", width = 24, height = 18, units = "in")
+
   
 #Make a plot with just x-axis text
 annotation_barplot <- ggarrange(B12_plot,
@@ -640,3 +654,25 @@ annotation_barplot <- ggarrange(B12_plot,
                                 common.legend = TRUE) + 
   rremove("ylab") + 
   rremove("xlab")
+
+
+# Multipanel plot ---------------------------------------------------------
+
+
+ggarrange(B12_plot, 
+          temp_plot, 
+          int_plot, nrow = 1, 
+          ncol = 3, 
+          labels = c("B12", "temp", "int"), 
+          label.x = c(.75, .5, .5),
+          label.y = .975,
+          common.legend = TRUE, 
+          widths = c(3.7,1,3), 
+          legend="bottom"
+          )
+
+ggsave("annotation_barchart.pdf", 
+       width = 35, 
+       height = 18, 
+       units = "in", 
+       limitsize = FALSE)
