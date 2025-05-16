@@ -65,22 +65,34 @@ write.csv(prot_quota_df, file = here("Fig_2/Fig_2_protein_quota_data/prot_quota_
 
 
 # Protein SRM Calculations ------------------------------------------------
-
-
+# FIXME do final moles to molecules calculation at the end here
 # Load in protein data
 targeted_data_raw <- read.csv(here('Fig_2/Fig_2.csv')) |> 
+  
+  rename(sample_id = Harvest_ID) |> 
   
   # Calculate ratio of light to heavy peptide
   mutate(light_heavy_ratio = peak_area_light/peak_area_heavy) |> 
   
   # Calculate fmol of each protein per total ug of protein from digest (20 ug of protein was digested)
-  mutate(fmol_ug_prot = light_heavy_ratio*20) |> 
+  mutate(fmol_ug_prot = light_heavy_ratio * 20) |> 
   
   # Calculate fmol of protein per ug protein on column
-  mutate(fmolProtein_ugProtein = fmol_ug_prot/ug_on_col) |> 
+  mutate(fmolAnalyte_ugProtein = fmol_ug_prot/ug_on_col,
+         pmolAnalyte_ugProtein = fmolAnalyte_ugProtein / 10^3) |> 
   
-  # Calculate fmol protein per cell 
-  mutate(fmolProtein_Cell = fmolProtein_ugProtein * ug_total_prot_cell) 
+  # Bring in protein quota data from 
+  left_join({prot_quota_df |> 
+              select(sample_id, ug_prot_cell)}, 
+            by = "sample_id") |> 
+  
+  # Calculate molecules per cell 
+  mutate(pmolAnalyte_cell = pmolAnalyte_ugProtein * ug_prot_cell, 
+         molAnalyte_cell = pmolAnalyte_cell * 10^15, 
+         
+         # IS THIS AVAGADRO'S NUMBER?
+         moleculesAnalyte_cell = molAnalyte_cell / 6.02E23) 
+  
 
 
 
@@ -91,7 +103,12 @@ targeted_data_raw <- read.csv(here('Fig_2/Fig_2.csv')) |>
 targeted_data <- targeted_data_raw |> 
   
   # Begin to convert to long format 
-  dplyr::select(Harvest_ID, Protein, B12, Temperature, ug_total_prot_cell) |> 
+  dplyr::select(sample_id, 
+                Protein, 
+                B12, 
+                Temperature, 
+                ug_prot_cell) |> 
+  
   filter(Protein == "MetH") |> 
   select(-c(Protein)) |> 
   mutate(MetH_fmol_cell = targeted_data_raw$fmolProtein_Cell[targeted_data_raw$Protein == "MetH"], 
