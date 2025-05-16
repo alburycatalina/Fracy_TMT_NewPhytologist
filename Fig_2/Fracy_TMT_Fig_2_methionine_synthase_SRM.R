@@ -49,8 +49,8 @@ prot_quota_df <-
   ) |> 
   full_join(cell_cnt_data, by = "sample_id") |> 
   mutate(cells_filter = cells_mL* 20, # 20 mL of culture filtered (2 x 10 mL filters in this extraction)
-         ug_prot_cell = ug_extracted_total / cells_filter, # calculate protein per cell
-         pg_prot_cell = ug_prot_cell * 10^6
+         ugTotalProt_cell = ug_extracted_total / cells_filter, # calculate protein per cell
+         pgTotalProt_cell = ugTotalProt_cell * 10^6
   ) |> 
   
   # set treatments as levels
@@ -65,9 +65,9 @@ write.csv(prot_quota_df, file = here("Fig_2/Fig_2_protein_quota_data/prot_quota_
 
 
 # Protein SRM Calculations ------------------------------------------------
-# FIXME do final moles to molecules calculation at the end here
-# Load in protein data
-targeted_data_raw <- read.csv(here('Fig_2/Fig_2.csv')) |> 
+
+# Calculate pmol/ug total protein and molecules per cell of analytes from SRM
+targeted_data_raw <- read.csv(here('Fig_2/Fig_2.csv')) |> # Load in protein data
   
   rename(sample_id = Harvest_ID) |> 
   
@@ -75,24 +75,48 @@ targeted_data_raw <- read.csv(here('Fig_2/Fig_2.csv')) |>
   mutate(light_heavy_ratio = peak_area_light/peak_area_heavy) |> 
   
   # Calculate fmol of each protein per total ug of protein from digest (20 ug of protein was digested)
-  mutate(fmol_ug_prot = light_heavy_ratio * 20) |> 
+  mutate(fmolAnalyte_ugProtein = light_heavy_ratio * 20) |> 
   
   # Calculate fmol of protein per ug protein on column
-  mutate(fmolAnalyte_ugProtein = fmol_ug_prot/ug_on_col,
+  mutate(fmolAnalyte_ugProtein = fmolAnalyte_ugProtein/ug_on_col,
          pmolAnalyte_ugProtein = fmolAnalyte_ugProtein / 10^3) |> 
   
   # Bring in protein quota data from 
   left_join({prot_quota_df |> 
-              select(sample_id, ug_prot_cell)}, 
+              select(sample_id, ugTotalProt_cell)}, 
             by = "sample_id") |> 
   
   # Calculate molecules per cell 
-  mutate(pmolAnalyte_cell = pmolAnalyte_ugProtein * ug_prot_cell, 
+  mutate(pmolAnalyte_cell = pmolAnalyte_ugProtein * ugTotalProt_cell, 
          molAnalyte_cell = pmolAnalyte_cell * 10^15, 
          
-         # IS THIS AVAGADRO'S NUMBER?
-         moleculesAnalyte_cell = molAnalyte_cell / 6.02E23) 
+         # Multiply by avagadro's number for molecules
+         moleculesAnalyte_cell = molAnalyte_cell * 6.022E23)
   
+  
+
+# Summary Stats -----------------------------------------------------------
+
+
+# Roll up to mean pmol per ug protein for replicates
+targeted_data_raw_repsum <- targeted_data_raw |> 
+  group_by(sample_id, 
+           B12, 
+           Temperature, 
+           Protein) |> 
+  dplyr::summarise(repmean_pmolAnalyte_ugProtein = mean(pmolAnalyte_ugProtein),
+                   repsd_pmolAnalyte_ugProtein = sd(pmolAnalyte_ugProtein))
+
+# Roll up to mean pmol per ug protein for treatments
+targeted_dataraw_treatsum <- targeted_data_raw_repsum |> 
+  group_by(B12, 
+           Temperature, 
+           Protein) |> 
+  dplyr::summarise(treatmean_pmolAnalyte_ugProtein = mean(repmean_pmolAnalyte_ugProtein),
+                   treatsd_pmolAnalyte_ugProtein = sd(repmean_pmolAnalyte_ugProtein))
+
+write.csv(targeted_dataraw_treatsum, 
+          file = here("Fig_2/Fig_2_protein_quota_data/targeted_dataraw_treatsum.csv"))
 
 
 
@@ -107,26 +131,16 @@ targeted_data <- targeted_data_raw |>
                 Protein, 
                 B12, 
                 Temperature, 
-                ug_prot_cell) |> 
+                pmolAnalyte_ugProtein,
+                moleculesAnalyte_cell) |> 
   
-  filter(Protein == "MetH") |> 
-  select(-c(Protein)) |> 
-  mutate(MetH_fmol_cell = targeted_data_raw$fmolProtein_Cell[targeted_data_raw$Protein == "MetH"], 
-         MetE_fmol_cell = targeted_data_raw$fmolProtein_Cell[targeted_data_raw$Protein == "MetE"],
-         ACT1_fmol_cell = targeted_data_raw$fmolProtein_Cell[targeted_data_raw$Protein == "ACT1"],
-         RBCL_fmol_cell = targeted_data_raw$fmolProtein_Cell[targeted_data_raw$Protein == "RBCL"]) |> 
-  
-  # Convert to yoctomoles
-  mutate(MetH_ymol_cell = MetH_fmol_cell * 1e9,
-         MetE_ymol_cell = MetE_fmol_cell * 1e9,
-         ACT1_ymol_cell = ACT1_fmol_cell * 1e9,
-         RBCL_ymol_cell = RBCL_fmol_cell * 1e9,
-         ACT1_ymol_cell = ACT1_fmol_cell * 1e9,
-         RBCL_ymol_cell = RBCL_fmol_cell * 1e9) |>  
-  
+  # Convert to a wide format for plotting 
+  pivot_wider(values_from = c(pmolAnalyte_ugProtein, moleculesAnalyte_cell),
+              names_from = Protein,
+              names_glue = "{Protein}_{.value}") |> 
   
   # Fold change calculations
-  mutate(fc = (MetE_fmol_cell - MetH_fmol_cell)/MetH_fmol_cell) |> 
+  mutate(fc = (MetE_pmolAnalyte_ugProtein - MetH_pmolAnalyte_ugProtein)/MetH_pmolAnalyte_ugProtein) |> 
 
   # Set up levels for plotting
   mutate(Temperature = factor(Temperature,
@@ -142,25 +156,6 @@ targeted_data <- targeted_data_raw |>
                                   B12)))
 
 
-# Summary Stats -----------------------------------------------------------
-
-
-# Roll up to mean fmol per ug protein
-targeted_data_raw_repsum <- targeted_data_raw |> 
-  group_by(Harvest_ID, 
-           B12, 
-           Temperature, 
-           Protein) |> 
-  dplyr::summarise(mean_fmol_ug = mean(fmolProtein_ugProtein))
-
-targeted_dataraw_treatsum <- targeted_data_raw_repsum |> 
-  group_by(B12, 
-           Temperature, 
-           Protein) |> 
-  dplyr::summarise(mol_ug = mean(mean_fmol_ug),
-                   sd_fmol_ug = sd(mean_fmol_ug))
-  
-  
 # MetH/MetE Boxplots -------------------------------------------------------------------
 
 # Color palette 

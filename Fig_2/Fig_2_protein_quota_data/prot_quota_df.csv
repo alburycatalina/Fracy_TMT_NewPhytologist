@@ -1,4 +1,4 @@
-"sample_id","ug_extracted_total","B12","Temperature","Treatment","cells_mL","cells_filter","ug_prot_cell","pg_prot_cell"
+"sample_id","ug_extracted_total","B12","Temperature","Treatment","cells_mL","cells_filter","ugTotalProt_cell","pgTotalProt_cell"
 "CMA-1-119-1",52.9437792,"+B12","4","4, +B12",208535,4170700,1.26942190040041e-05,12.6942190040041
 "CMA-1-119-2",55.2209392,"+B12","4","4, +B12",246515,4930300,1.12003203050524e-05,11.2003203050524
 "CMA-1-119-3",54.6603306,"+B12","4","4, +B12",208345,4166900,1.3117744750294e-05,13.117744750294
