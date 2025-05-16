@@ -3,20 +3,73 @@
 
 
 # Setup -------------------------------------------------------------------
-setwd("~/Bertrand Lab Dropbox/Bertrand Lab shared workspace/Catalina/Summer_2022/0_Fracy_TMT_Manuscript/Fracy_TMT_FigScripts/Fig_2")
 
 # Load required packages
 library(ggplot2)
 library(agricolae)
 library(dplyr)
 library(ggpubr)
+library(here)
+
+# Declare file locations with `here`
+here::i_am("Fig_2/Fracy_TMT_Fig_2_methionine_synthase_SRM.R")
+
+
+
+# Protein Quota Calculations ----------------------------------------------------------
+
+# Load in cell counts
+cell_cnt_data <- read.csv(here("Fig_1/cell_cnt_raw.csv")) |> 
+  filter(time_since_temp_hours == 24) |> # hour 24 is time of harvest 
+  select(Sample, B12, Temperature, Treatment, cells_mL) |>
+  mutate(Sample = substring(Sample, 5)) |>   # remove cell numbers 
+  rename(sample_id = Sample)
+
+# Get protein quotas 
+# Use BCA run to find the concentration of the protein before digestion for MS 
+prot_quota_df <- 
+  read.csv(here(
+  "Fig_2/Fig_2_Raw_data/BCA1.1_05062019_a.txt_dilution25.csv")) |> # load in protein BCA data 
+  select(sample_id, ug_extracted_total) |>
+  mutate(
+    sample_id = c(
+      'CMA-1-119-1',
+      'CMA-1-119-2',
+      'CMA-1-119-3',
+      'CMA-1-137-7',
+      'CMA-1-127-8',
+      'CMA-1-119-9',
+      'CMA-1-146-1',
+      'CMA-1-146-2',
+      'CMA-1-146-3',
+      'CMA-1-146-7',
+      'CMA-1-146-8',
+      'CMA-1-146-9'
+    )
+  ) |> 
+  full_join(cell_cnt_data, by = "sample_id") |> 
+  mutate(cells_filter = cells_mL* 20, # 20 mL of culture filtered (2 x 10 mL filters in this extraction)
+         ug_prot_cell = ug_extracted_total / cells_filter, # calculate protein per cell
+         pg_prot_cell = ug_prot_cell * 10^6
+  ) |> 
+  
+  # set treatments as levels
+  mutate(Temperature = factor(Temperature, levels = c("4", "12")),
+         B12 = factor(B12, 
+                      levels = c("Y", "N"),
+                      labels = c("+B12", "-B12")))
+
+# Write protein quota data 
+write.csv(prot_quota_df, file = here("Fig_2/Fig_2_protein_quota_data/prot_quota_df.csv"), 
+          row.names = FALSE)
 
 
 # Protein SRM Calculations ------------------------------------------------
 
 
 # Load in protein data
-targeted_data_raw <- read.csv('Fig_2.csv') |> 
+targeted_data_raw <- read.csv(here('Fig_2/Fig_2.csv')) |> 
+  
   # Calculate ratio of light to heavy peptide
   mutate(light_heavy_ratio = peak_area_light/peak_area_heavy) |> 
   
@@ -181,7 +234,7 @@ ggarrange(metH_quota,
           font.label = list(size = 25, 
                             color = "black"))
 
-ggsave("meth_mete_barplots.pdf", width = 12, height = 6, units = "in")
+ggsave(here("Fig_2/Fig_2_meth_mete_barplots.pdf"), width = 12, height = 6, units = "in")
 
 # Transparent Background Figs ---------------------------------------------
 # MetH Plot
@@ -215,7 +268,7 @@ metH_quota_bg <- ggplot(targeted_data, aes(x=Temperature,
   )
 
 
-ggsave(metH_quota_bg, filename = "metH_transbg.png",  bg = "transparent")
+# ggsave(metH_quota_bg, filename = "metH_transbg.png",  bg = "transparent")
 
 metE_quota_bg <- ggplot(
   targeted_data,
@@ -258,7 +311,7 @@ metE_quota_bg <- ggplot(
     text = element_text(size = 25)
   )
 
-ggsave(metE_quota_bg, filename = "metE_transbg.png",  bg = "transparent")
+# ggsave(metE_quota_bg, filename = "metE_transbg.png",  bg = "transparent")
 
 
 # t-test on MetH ------------------------------------------------------
@@ -341,62 +394,9 @@ y_meteB12_12 <- targeted_data |>
 
 t.test(x_meteB12_12, y_meteB12_12)
 
-# Protein Quotas ----------------------------------------------------------
-
-# load in protein quota data
-protquota_data <- read.csv("Fig_2_Raw_data/BCA1.1_05062019_a.txt_dilution25.csv")
-
-#enter 12deg samples treatment data
-id_12 <- c('CMA-1-119-1','CMA-1-119-2','CMA-1-119-3', 'CMA-1-137-7', 'CMA-1-129-8', 'CMA-1-119-9', 'CMA-1-146-1', 'CMA-1-146-2', 'CMA-1-146-3', 'CMA-1-146-7', 'CMA-1-146-8', 'CMA-1-146-9')
-
-B12_12 <- c('+B12','+B12','+B12','-B12','-B12','-B12','+B12','+B12','+B12','-B12','-B12','-B12')
-
-temp_12 <- c('4','4','4','4','4','4','12','12','12','12','12','12')
-
-
-sample_treat_12 <- data.frame(id_12,B12_12, temp_12)
-colnames(sample_treat_12) <- c("id_12", "B12", "temp")
-
-protquota_data <- cbind(protquota_data, sample_treat_12) |> 
-  mutate(temp = factor(temp, levels = c("4", "12")),
-         B12 = factor(B12, 
-                      levels = c("+B12", 
-                                 "-B12")),
-         Treatment = factor(paste(temp, ",", B12)),
-         fg_prot_cell = ug_cell_protein * 1e9)
 
 
 
-
-# Protein Boxplot (Fig S3) ---------------------------------------------------------
-
-protquota_bp1 <- ggplot(
-  protquota_data,
-  aes(
-    x = temp,
-    y = fg_prot_cell,
-    grouping = Treatment,
-    fill = temp,
-    alpha = B12
-  )
-) +
-  geom_boxplot() +
-  theme_classic() +
-  theme(text = element_text(size = 20)) +
-  scale_fill_manual(values = col_12, labels = c("4", "12")) +
-  scale_alpha_manual(values = c(1, .25), labels = c("+", "-")) +
-  labs(
-    y = bquote('Total Protein (Femtograms cell' ^ -1 * ')') ,
-    x = "Treatment",
-    fill = 'Temperature (°C)',
-    alpha = expression("B"[12])
-  ) +
-  guides(alpha = guide_legend(override.aes = list(
-    fill = hcl(c(15, 195), 100, 0, alpha = c(0.25, 1)), colour = NA
-  ))) +
-  theme(axis.text.x = element_blank(), axis.ticks = element_blank()) 
-
-ggsave("total_prot_boxplot_S3.pdf", width = 7, height = 6, units = "in")
 
 # Overall Protein t-test  -------------------------------------------------
 
