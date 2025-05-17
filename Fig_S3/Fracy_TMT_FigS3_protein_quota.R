@@ -12,6 +12,20 @@ prot_quota_df <- read.csv(here("Fig_2/Fig_2_protein_quota_data/prot_quota_df.csv
          B12 = factor(B12, 
                       levels = c("+B12", "-B12")))
 
+
+# Protein Quota Stats -----------------------------------------------------
+
+# Total protein Protein t-test  -------------------------------------------------
+
+# T-test to compare temps (p = 0.009954)
+t.test({prot_quota_df |> 
+    filter(Temperature == "4") |> 
+    pull(ugTotalProt_cell)}, 
+    {prot_quota_df |> 
+        filter(Temperature == "12") |> 
+        pull(ugTotalProt_cell)})
+
+
 # Protein Boxplot (Fig S3) ---------------------------------------------------------
 
 # Color palette 
