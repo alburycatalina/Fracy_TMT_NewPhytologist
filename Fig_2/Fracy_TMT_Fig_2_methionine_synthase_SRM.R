@@ -10,6 +10,7 @@ library(agricolae)
 library(dplyr)
 library(ggpubr)
 library(here)
+library(forcats)
 
 # Declare file locations with `here`
 here::i_am("Fig_2/Fracy_TMT_Fig_2_methionine_synthase_SRM.R")
@@ -124,36 +125,40 @@ write.csv(targeted_dataraw_treatsum,
 # Data Prep for plots ---------------------------------------------------------------
 
 # Create new df for plots
-targeted_data <- targeted_data_raw |> 
+targeted_data <- targeted_data_raw |>
   
-  # Begin to convert to long format 
-  dplyr::select(sample_id, 
-                Protein, 
-                B12, 
-                Temperature, 
+  # Begin to convert to long format
+  dplyr::select(sample_id,
+                Protein,
+                B12,
+                Temperature,
                 pmolAnalyte_ugProtein,
-                moleculesAnalyte_cell) |> 
+                moleculesAnalyte_cell) |>
   
-  # Convert to a wide format for plotting 
-  pivot_wider(values_from = c(pmolAnalyte_ugProtein, moleculesAnalyte_cell),
-              names_from = Protein,
-              names_glue = "{Protein}_{.value}") |> 
+  # Convert to a wide format for plotting
+  pivot_wider(
+    values_from = c(pmolAnalyte_ugProtein, moleculesAnalyte_cell),
+    names_from = Protein,
+    names_glue = "{Protein}_{.value}"
+  ) |>
   
   # Fold change calculations
-  mutate(fc = (MetE_pmolAnalyte_ugProtein - MetH_pmolAnalyte_ugProtein)/MetH_pmolAnalyte_ugProtein) |> 
-
+  mutate(
+    fc = (MetE_pmolAnalyte_ugProtein - MetH_pmolAnalyte_ugProtein) / MetH_pmolAnalyte_ugProtein
+  ) |>
+  
   # Set up levels for plotting
-  mutate(Temperature = factor(Temperature,
-                              levels = c("4", 
-                                         "12")),
-         B12 = factor(paste(B12, 
-                            "B12", 
-                            sep= ""),
-                      levels = c("+B12", 
-                                 "-B12")),
-         Treatment = factor(paste(Temperature,
-                                  ",",
-                                  B12)))
+  mutate(
+    Temperature = factor(Temperature, 
+                         levels = c("4", "12")),
+    B12 = factor(paste(B12, "B12", sep = ""), 
+                 levels = c("+B12", "-B12")),
+    Treatment = factor(paste0(Temperature, ",", B12),
+                       levels = c("4,+B12", 
+                                  "4,-B12", 
+                                  "12,+B12", 
+                                  "12,-B12")
+  ))
 
 
 # MetH/MetE Boxplots -------------------------------------------------------------------
@@ -162,17 +167,17 @@ targeted_data <- targeted_data_raw |>
 col_12 <- c("#92C5DE", "#B2182B" )
 
 # MetH Plot
-metH_quota <- ggplot(
+metH_quota_picomol <- ggplot(
   targeted_data,
   aes(
     x = Temperature,
-    y = MetH_ymol_cell,
+    y = MetH_pmolAnalyte_ugProtein,
     grouping = Treatment,
     fill = Temperature,
-    alpha = B12 # Make B12 the transparency 
+    alpha = B12 # Make B12 dictate the transparency 
   )
 ) +
-  geom_boxplot() + # Initate a boxplot
+  geom_boxplot() + # Initiate a boxplot
   theme_classic() + # Classic theme
   
   # Make text larger
@@ -192,7 +197,7 @@ metH_quota <- ggplot(
   
   # Labels
   labs(
-    y = bquote('Yoctomoles MetH cell' ^ -1) ,
+    y = bquote('Picomoles MetH \u03bcg protein' ^ -1) , # ilu unicode characters <3 
     x = "Treatment",
     fill = 'Temperature (°C)',
     alpha = expression("B"[12])
@@ -206,14 +211,15 @@ metH_quota <- ggplot(
                alpha = c(.25, 1)), 
     colour = NA
   ))) +
-  theme(axis.text.x = element_blank(), axis.ticks = element_blank())
+  theme(axis.text.x = element_blank(), axis.ticks = element_blank()) +
+  ylim(0, .025)
 
 # MetE Plot
-metE_quota_bg <- ggplot(
+metE_quota_picomol <- ggplot(
   targeted_data,
   aes(
     x = Temperature,
-    y = MetE_ymol_cell,
+    y = MetE_pmolAnalyte_ugProtein,
     grouping = Treatment,
     fill = Temperature,
     alpha = B12
@@ -225,80 +231,7 @@ metE_quota_bg <- ggplot(
   scale_fill_manual(values = col_12, labels = c("4", "12")) +
   scale_alpha_manual(values = c(1, .25), labels = c("+", "-")) +
   labs(
-    y = bquote('Yoctomoles MetE cell' ^ -1) ,
-    x = "Treatment",
-    fill = 'Temperature (°C)',
-    alpha = expression("B"[12])
-  ) +
-  guides(alpha = guide_legend(override.aes = list(
-    fill = hcl(c(15, 195), 100, 0, alpha = c(0.25, 1)), colour = NA
-  ))) +
-  theme(axis.text.x = element_blank(), axis.ticks = element_blank()) 
-
-# Arrange MetH/MetE Boxplots
-ggarrange(metH_quota, 
-          metE_quota_bg, 
-          ncol = 2,
-          nrow = 1, 
-          common.legend = TRUE, 
-          legend = "bottom", 
-          labels = c("a", "b"),  
-          font.label = list(size = 25, 
-                            color = "black"))
-
-ggsave(here("Fig_2/Fig_2_meth_mete_barplots.pdf"), width = 12, height = 6, units = "in")
-
-# Transparent Background Figs ---------------------------------------------
-# MetH Plot
-metH_quota_bg <- ggplot(targeted_data, aes(x=Temperature, 
-                                           y= MetH_fmol_cell, 
-                                           grouping = Treatment, 
-                                           fill = Temperature, 
-                                           alpha = B12)) + 
-  geom_boxplot() +
-  theme_classic() +
-  theme(text = element_text(size = 20)) +
-  scale_fill_manual(values = col_12, labels= c("4", "12")) +
-  scale_alpha_manual(values = c(1, .25), 
-                     labels = c( "+", "-")) +
-  labs(y= bquote('Femtomoles MetH cell'^-1) , 
-       x= "Treatment", 
-       fill='Temperature (°C)', 
-       alpha = expression("B"[12])) +
-  guides(alpha=guide_legend(override.aes=list(fill=hcl(c(15,195),100,0, alpha=c(0.25,1)), colour=NA))) +
-  theme(axis.text.x = element_blank(), 
-        axis.ticks = element_blank()) +
-  ylim(0, 8e-9) +
-  theme(
-    panel.background = element_rect(fill = "transparent"), # bg of the panel
-    plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
-    panel.grid.major = element_blank(), # get rid of major grid
-    panel.grid.minor = element_blank(), # get rid of minor grid
-    legend.background = element_rect(fill = "transparent"), # get rid of legend bg
-    legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg, 
-    text = element_text(size=25)
-  )
-
-
-# ggsave(metH_quota_bg, filename = "metH_transbg.png",  bg = "transparent")
-
-metE_quota_bg <- ggplot(
-  targeted_data,
-  aes(
-    x = Temperature,
-    y = MetE_fmol_cell,
-    grouping = Treatment,
-    fill = Temperature,
-    alpha = B12
-  )
-) +
-  geom_boxplot() +
-  theme_classic() +
-  theme(text = element_text(size = 20)) +
-  scale_fill_manual(values = col_12, labels = c("4", "12")) +
-  scale_alpha_manual(values = c(1, .25), labels = c("+", "-")) +
-  labs(
-    y = bquote('Femtomoles MetE cell' ^ -1) ,
+    y = bquote('Picomoles MetE \u03bcg protein' ^ -1) ,
     x = "Treatment",
     fill = 'Temperature (°C)',
     alpha = expression("B"[12])
@@ -307,120 +240,144 @@ metE_quota_bg <- ggplot(
     fill = hcl(c(15, 195), 100, 0, alpha = c(0.25, 1)), colour = NA
   ))) +
   theme(axis.text.x = element_blank(), axis.ticks = element_blank()) +
-  theme(
-    panel.background = element_rect(fill = "transparent"),
-    # bg of the panel
-    plot.background = element_rect(fill = "transparent", color = NA),
-    # bg of the plot
-    panel.grid.major = element_blank(),
-    # get rid of major grid
-    panel.grid.minor = element_blank(),
-    # get rid of minor grid
-    legend.background = element_rect(fill = "transparent"),
-    # get rid of legend bg
-    legend.box.background = element_rect(fill = "transparent"),
-    # get rid of legend panel bg,
-    text = element_text(size = 25)
+  ylim(0, .025)
+
+
+# MetH Plot
+metH_quota_molecules <- ggplot(
+  targeted_data,
+  aes(
+    x = Temperature,
+    y = MetH_moleculesAnalyte_cell,
+    grouping = Treatment,
+    fill = Temperature,
+    alpha = B12 # Make B12 dictate the transparency 
   )
+) +
+  geom_boxplot() + # Initiate a boxplot
+  theme_classic() + # Classic theme
+  
+  # Make text larger
+  theme(text = element_text(size = 20)) +
+  
+  # Set colors from palette
+  scale_fill_manual(values = col_12, 
+                    labels = c("4",
+                               "12")) +
+  
+  # Make B12 the transparency 
+  scale_alpha_manual(
+    values = c(1, .25),
+    labels = c("+", "-"),
+    breaks = c("+B12", "-B12")
+  ) +
+  
+  # Labels
+  labs(
+    y = bquote('Molecules MetH cell' ^ -1) , # ilu unicode characters <3 
+    x = "Treatment",
+    fill = 'Temperature (°C)',
+    alpha = expression("B"[12])
+  ) +
+  
+  # Fix legend
+  guides(alpha = guide_legend(override.aes = list(
+    fill = hcl(c(15, 195), 
+               100,
+               0, 
+               alpha = c(.25, 1)), 
+    colour = NA
+  ))) +
+  theme(axis.text.x = element_blank(), axis.ticks = element_blank()) +
+  ylim(0, 3e32)
 
-# ggsave(metE_quota_bg, filename = "metE_transbg.png",  bg = "transparent")
+# MetE Plot
+metE_quota_molecules <- ggplot(
+  targeted_data,
+  aes(
+    x = Temperature,
+    y = MetE_moleculesAnalyte_cell,
+    grouping = Treatment,
+    fill = Temperature,
+    alpha = B12
+  )
+) +
+  geom_boxplot() +
+  theme_classic() +
+  theme(text = element_text(size = 20)) +
+  scale_fill_manual(values = col_12, labels = c("4", "12")) +
+  scale_alpha_manual(values = c(1, .25), labels = c("+", "-")) +
+  labs(
+    y = bquote('Molecules MetE cell' ^ -1) ,
+    x = "Treatment",
+    fill = 'Temperature (°C)',
+    alpha = expression("B"[12])
+  ) +
+  guides(alpha = guide_legend(override.aes = list(
+    fill = hcl(c(15, 195), 100, 0, alpha = c(0.25, 1)), colour = NA
+  ))) +
+  theme(axis.text.x = element_blank(), axis.ticks = element_blank()) +
+  ylim(0, 3e32)
 
+
+# Arrange MetH/MetE Boxplots
+ggarrange(metH_quota_picomol, 
+          metE_quota_picomol,
+          metH_quota_molecules,
+          metE_quota_molecules,
+          ncol = 2,
+          nrow = 2, 
+          common.legend = TRUE, 
+          legend = "bottom", 
+          labels = c("a", "b", "c", "d"),  
+          font.label = list(size = 25, 
+                            color = "black"))
+
+# No 
+ggsave(here("Fig_2/Fig_2_meth_mete_barplots.png"), 
+       width = 12,
+       height = 12, 
+       units = "in")
 
 # t-test on MetH ------------------------------------------------------
 
-# Temp MetH - not sig (p = 0.6726)
-x_methTemp <- targeted_data |> 
-  filter(Temperature == "4") |> 
-  pull(MetH_fmol_cell)
-
-y_methTemp <- targeted_data |> 
-  filter(Temperature == "12") |> 
-  pull(MetH_fmol_cell)
-
-t.test(x_methTemp, y_methTemp)
+# Temp MetH - not sig (p = 0.08816)
+t.test({targeted_data |> 
+         filter(Temperature == "4") |> 
+         pull(MetH_pmolAnalyte_ugProtein)}, 
+       {targeted_data |> 
+         filter(Temperature == "12") |> 
+         pull(MetH_pmolAnalyte_ugProtein)})
 
 
-# B12 MetH - not sig (p-value = 0.5063)
-x_methB12 <- targeted_data |> 
-  filter(B12 == "+B12") |> 
-  pull(MetH_fmol_cell)
-
-y_methB12 <- targeted_data |> 
-  filter(B12 == "-B12") |> 
-  pull(MetH_fmol_cell)
-
-t.test(x_methB12, y_methB12)
+# B12 MetH - not sig (p-value = 0.615)
+t.test({targeted_data |> 
+    filter(B12 == "+B12") |> 
+    pull(MetH_pmolAnalyte_ugProtein)}, 
+    {targeted_data |> 
+        filter(B12 == "-B12") |> 
+        pull(MetH_pmolAnalyte_ugProtein)})
 
 
 # t-test on MetE ------------------------------------------------------
 
-# Temp MetE - not sig (p-value = 0.6615)
-x_meteTemp <- targeted_data |> 
-  filter(Temperature == "4" & 
-           B12 == "-B12") |> 
-  pull(MetE_fmol_cell)
-
-y_meteTemp <- targeted_data |> 
-  filter(Temperature == "12" & 
-           B12 == "-B12") |> 
-  pull(MetE_fmol_cell)
-
-t.test(x_meteTemp, y_meteTemp)
-
-
-# B12 MetE - significantly less in noB12 samples (p-value = 0.001651)
-x_meteB12 <- targeted_data |> 
-  filter(B12 == "+B12") |> 
-  pull(MetE_fmol_cell)
-
-y_meteB12 <- targeted_data |>  
-  filter(B12 == "-B12") |>
-  pull(MetE_fmol_cell)
-
-t.test(x_meteB12, y_meteB12)
-
-# Break down by temps
-x_meteB12_4 <- targeted_data |> 
-  dplyr::filter(B12 == "+B12" &
-                  Temperature == "4") |> 
-  pull(MetE_fmol_cell)
-
-y_meteB12_4 <- targeted_data |>  
-  filter(B12 == "-B12" & 
-           Temperature == "4") |> 
-  pull(MetE_fmol_cell)
-
-t.test(x_meteB12_4, y_meteB12_4)
-
-# 12
-x_meteB12_12 <- targeted_data |> 
-  dplyr::filter(B12 == "+B12" &
-                  Temperature == "12") |> 
-  pull(MetE_fmol_cell)
-
-y_meteB12_12 <- targeted_data |>
-  filter(B12 == "-B12" & 
-           Temperature == "12") |> 
-  pull(MetE_fmol_cell)
-
-
-t.test(x_meteB12_12, y_meteB12_12)
+# Temp MetE - not sig (p-value = 0.5993)
+t.test({targeted_data |> 
+    filter(Temperature == "4") |> 
+    pull(MetE_pmolAnalyte_ugProtein)}, 
+    {targeted_data |> 
+        filter(Temperature == "12") |> 
+        pull(MetE_pmolAnalyte_ugProtein)})
 
 
 
+# B12 MetE - significantly less in noB12 samples (p-value = 0.0003055)
+t.test({targeted_data |> 
+    filter(B12 == "+B12") |> 
+    pull(MetE_pmolAnalyte_ugProtein)}, 
+    {targeted_data |> 
+        filter(B12 == "-B12") |> 
+        pull(MetE_pmolAnalyte_ugProtein)})
 
-
-# Overall Protein t-test  -------------------------------------------------
-
-# T-test to compare temps (p = 0.009954)
-x_prot4 <- protquota_data |>  
-  filter(temp == "4") |> 
-  pull(fg_prot_cell)
-
-y_prot12 <- protquota_data |> 
-  filter(temp == "12") |> 
-  pull(fg_prot_cell)
-
-t.test(x_prot4, y_prot12)
 
 
