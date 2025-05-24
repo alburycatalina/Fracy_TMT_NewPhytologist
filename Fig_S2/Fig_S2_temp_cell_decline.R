@@ -84,7 +84,7 @@ bp_12 <- ggplot(
   guides(alpha = guide_legend(override.aes = list(
     fill = hcl(c(15, 195), 100, 0, alpha = c(0.25, 1)), colour = NA
   ))) +
-  ylim(11, 12.5)
+  ylim(10.75, 12.5)
 
 
 # Boxplot for 10 deg
@@ -112,7 +112,7 @@ bp_10 <- ggplot(
   guides(alpha = guide_legend(override.aes = list(
     fill = hcl(c(15, 195), 100, 0, alpha = c(0.25, 1)), colour = NA
   ))) +
-  ylim(11, 12.5)
+  ylim(10.75, 12.5)
 
 
 # Figs last touches -------------------------------------------------------
@@ -123,19 +123,16 @@ figure <- ggarrange(bp_12,
                     bp_10, 
                     ncol = 1, 
                     nrow = 2, 
-                    common.legend = TRUE,
+                    common.legend = FALSE,
                     legend ="bottom", 
                     labels = c("a", "b")) 
 
-
-(bp_12 + bp_10) + plot_layout(guides = 'collect')
 
 # Annotate with y axis label 
 annotated_rfu_boxplot <- annotate_figure(figure,
                 left = text_grob(bquote('Estimated Log'[10]~'Cells mL'^-1), 
                                  rot = 90, 
-                                 size = 20, 
-                                 hjust = .75))
+                                 size = 20))
 
 # Save fig to folder
 ggsave(annotated_rfu_boxplot, 
