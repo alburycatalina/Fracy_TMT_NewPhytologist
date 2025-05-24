@@ -254,8 +254,6 @@ counts_df_B12$B <- factor(counts_df_B12$B, levels = counts_df_B12$B)
 # Wishlist - multipanel plot with labels
 # zebra highlighting in background for functional groups 
 # Fix labels in mulitpanel for subscripts on B12 etc
-
-
 B12_plot <- ggplot(counts_df_B12, 
                    aes(y = B, 
                        x = n, 
