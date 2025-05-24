@@ -80,7 +80,8 @@ prot_comp_plot <- ggplot(
   scale_color_manual(values = b12_palette) +
   geom_errorbar(
     data = prot_comp_df,
-    mapping = aes(ymin = meanfmolAnalyte_ugProtein - sdfmolAnalyte_ugProtein, ymax = meanfmolAnalyte_ugProtein + sdfmolAnalyte_ugProtein),
+    mapping = aes(ymin = meanfmolAnalyte_ugProtein - sdfmolAnalyte_ugProtein,
+                  ymax = meanfmolAnalyte_ugProtein + sdfmolAnalyte_ugProtein),
     position = position_dodge(width = 0.5),
     width = .2
   ) +
