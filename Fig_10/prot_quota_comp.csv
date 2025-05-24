@@ -1,0 +1,11 @@
+"","Treatment","Organism","Source","Protein","B12","meanfmolAnalyte_ugProtein","sdfmolAnalyte_ugProtein"
+"1","F. cylindrus (This study)","F. cylindrus","This study","MetE","+",0.850436564007198,0.58817723114596
+"2","F. cylindrus (This study)","F. cylindrus","This study","MetH","+",8.06706724183327,4.61028123903315
+"3","F. cylindrus (This study)","F. cylindrus","This study","MetE","-",22.0471655979839,0.57525693688855
+"4","F. cylindrus (This study)","F. cylindrus","This study","MetH","-",7.14016619897725,1.33400261388021
+"5","P. tricornutum (Bertrand et al. 2013)","P. tricornutum","Bertrand et al. 2013","MetH","+",0.0536,0.018245273
+"6","P. tricornutum (Bertrand et al. 2013)","P. tricornutum","Bertrand et al. 2013","MetE","+",0.024833333,0.008523106
+"7","P. tricornutum (Bertrand et al. 2013)","P. tricornutum","Bertrand et al. 2013","MetH","-",0.0095357,0.007479642
+"8","P. tricornutum (Bertrand et al. 2013)","P. tricornutum","Bertrand et al. 2013","MetE","-",3.247433333,0.72267138
+"9","McMurdo Sound (Bertrand et al. 2013)","Environmental","Bertrand et al. 2013","MetH","In situ",0.3194,0.225100844
+"10","McMurdo Sound (Bertrand et al. 2013)","Environmental","Bertrand et al. 2013","MetE","In situ",0.209925,0.199618209

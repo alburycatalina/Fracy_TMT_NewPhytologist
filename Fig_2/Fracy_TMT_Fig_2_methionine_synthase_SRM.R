@@ -117,7 +117,8 @@ targeted_dataraw_treatsum <- targeted_data_raw_repsum |>
                    treatsd_pmolAnalyte_ugProtein = sd(repmean_pmolAnalyte_ugProtein))
 
 write.csv(targeted_dataraw_treatsum, 
-          file = here("Fig_2/Fig_2_protein_quota_data/targeted_dataraw_treatsum.csv"))
+          file = here("Fig_2/Fig_2_protein_quota_data/targeted_dataraw_treatsum.csv"), 
+          row.names = FALSE)
 
 
 

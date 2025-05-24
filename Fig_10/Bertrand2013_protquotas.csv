@@ -1,0 +1,7 @@
+﻿Treatment,Organism,Source,Protein,B12,meanfmolAnalyte_ugProtein,sdfmolAnalyte_ugProtein
+P. tricornutum (Bertrand et al. 2013),P. tricornutum,Bertrand et al. 2013,MetH,+,0.0536,0.018245273
+P. tricornutum (Bertrand et al. 2013),P. tricornutum,Bertrand et al. 2013,MetE,+,0.024833333,0.008523106
+P. tricornutum (Bertrand et al. 2013),P. tricornutum,Bertrand et al. 2013,MetH,-,0.0095357,0.007479642
+P. tricornutum (Bertrand et al. 2013),P. tricornutum,Bertrand et al. 2013,MetE,-,3.247433333,0.72267138
+McMurdo Sound (Bertrand et al. 2013),Environmental,Bertrand et al. 2013,MetH,In situ,0.3194,0.225100844
+McMurdo Sound (Bertrand et al. 2013),Environmental,Bertrand et al. 2013,MetE,In situ,0.209925,0.199618209
