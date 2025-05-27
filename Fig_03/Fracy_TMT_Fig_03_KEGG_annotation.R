@@ -26,19 +26,19 @@ here::i_am("Fig_03/Fracy_TMT_Fig_03_KEGG_annotation.R")
 
 
 # Load in data with hits of DE'd proteins 4,B12 vs 4,noB12  (B12 response)
-B12_hits <- read.csv(here("Fig_03/Fig_03_RAW/hits_4_noB12_20102021.csv")) |>
+B12_hits <- read.csv(here("Fracy_TMT_DifferentialExpression/hits_4_noB12_20102021.csv")) |>
   mutate(Description = str_remove(Description, fixed(pattern = "[Fragilariopsis cylindrus CCMP1102]")),
          DE_origin = "B12")
 
 
 
 # 4,B12 vs 12,B12 (temp response)
-temp_hits <- read.csv(here("Fig_03/Fig_03_RAW/hits_12_B12_20102021.csv")) |>
+temp_hits <- read.csv(here("Fracy_TMT_DifferentialExpression/hits_12_B12_20102021.csv")) |>
   mutate(Description = str_remove(Description, fixed(pattern = "[Fragilariopsis cylindrus CCMP1102]")),
          DE_origin = "temp")
 
 # 4,B12 vs 12,noB12 (interaction repsponse between B12 and temp)
-int_hits <- read.csv(here("Fig_03/Fig_03_RAW/hits_12_noB12_20102021.csv")) |>
+int_hits <- read.csv(here("Fracy_TMT_DifferentialExpression/hits_12_noB12_20102021.csv")) |>
 mutate(Description = str_remove(Description, fixed(pattern = "[Fragilariopsis cylindrus CCMP1102]")),
        DE_origin = "int")
 
