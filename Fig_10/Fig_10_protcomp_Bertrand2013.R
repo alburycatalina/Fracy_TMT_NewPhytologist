@@ -8,7 +8,7 @@ library(here)
 library(MetBrewer)
 
 # Load in and clean quota data 
-fracy_metemeth_quotas <- read.csv(here("Fig_2/Fig_2_protein_quota_data/targeted_dataraw_treatsum.csv")) |> 
+fracy_metemeth_quotas <- read.csv(here("Fig_02/Fig_02_protein_quota_data/targeted_dataraw_treatsum.csv")) |> 
   
   # get only MetE and MetH
   filter(Temperature == "4",
