@@ -15,28 +15,30 @@ library(stringr)
 library(data.table)
 library(grid)
 library(scales)
+library(here)
 
 # Installing KEGGREST
 # BiocManager::install("KEGGREST")
 
+here::i_am("Fig_03/Fracy_TMT_Fig_03_KEGG_annotation.R")
 
 # Load DE Data ------------------------------------------------------------
 
 
 # Load in data with hits of DE'd proteins 4,B12 vs 4,noB12  (B12 response)
-B12_hits <- read.csv(here("Fig_3/Fig_3_raw_data/hits_4_noB12_20102021.csv")) |>
+B12_hits <- read.csv(here("Fig_03/Fig_03_RAW/hits_4_noB12_20102021.csv")) |>
   mutate(Description = str_remove(Description, fixed(pattern = "[Fragilariopsis cylindrus CCMP1102]")),
          DE_origin = "B12")
 
 
 
 # 4,B12 vs 12,B12 (temp response)
-temp_hits <- read.csv(here("Fig_3/Fig_3_raw_data/hits_12_B12_20102021.csv")) |>
+temp_hits <- read.csv(here("Fig_03/Fig_03_RAW/hits_12_B12_20102021.csv")) |>
   mutate(Description = str_remove(Description, fixed(pattern = "[Fragilariopsis cylindrus CCMP1102]")),
          DE_origin = "temp")
 
 # 4,B12 vs 12,noB12 (interaction repsponse between B12 and temp)
-int_hits <- read.csv(here("Fig_3/Fig_3_raw_data/hits_12_noB12_20102021.csv")) |>
+int_hits <- read.csv(here("Fig_03/Fig_03_RAW/hits_12_noB12_20102021.csv")) |>
 mutate(Description = str_remove(Description, fixed(pattern = "[Fragilariopsis cylindrus CCMP1102]")),
        DE_origin = "int")
 
@@ -52,7 +54,7 @@ hits_list <- rbind(B12_hits, temp_hits, int_hits) |>
 # Add KEGG Annotation Information -----------------------------------------
 
 # Match in protein ID's from NCBI (https://www.ncbi.nlm.nih.gov/genome/browse/#!/proteins/11246/283952%7CFragilariopsis%20cylindrus%20CCMP1102/)
-prot_info <- read.csv(here("Fig_3/Fig_3_raw_data/prot_table.csv")) |>
+prot_info <- read.csv(here("Fig_03/Fig_03_RAW/prot_table.csv")) |>
   rename("accession" = "Protein.product")
 
 # Protein ID's for chloroplast from (https://www.ncbi.nlm.nih.gov/genome/browse/#!/proteins/11246/748136%7CFragilariopsis%20cylindrus/chloroplast/)
@@ -73,15 +75,15 @@ prot_data_ids <- left_join(hits_list, prot_info, by = "accession") |>
 
 # Save fracy data to rds file for quick loading
 # saveRDS(as.data.frame(keggList("fcy")), 
-        # here("Fig_3/Fig_3_raw_data", "KEGGlist_frag.rds"))
+        # here("Fig_03/Fig_03_RAW", "KEGGlist_frag.rds"))
 
 # Load in RDS if available in cache
-KEGGlist_frag <- readRDS(here("Fig_3/Fig_3_raw_data", "KEGGlist_frag.rds"))
+KEGGlist_frag <- readRDS(here("Fig_03/Fig_03_RAW", "KEGGlist_frag.rds"))
 
 
 
 # FIXME source for these matching KEGG numbers?
-frag_kegg_nos_raw <- read.csv(here("Fig_3/Fig_3_raw_data/frag_kegg_no.csv"))
+frag_kegg_nos_raw <- read.csv(here("Fig_03/Fig_03_RAW/frag_kegg_no.csv"))
 
 # Parse columns by separators
 frag_kegg_nos <- colsplit(frag_kegg_nos_raw$Name," ",c("id","kegg_id"))
@@ -124,7 +126,7 @@ B12_table <- filter(frag_kegg_final, DE_origin == "B12", PValue < .05) |>
 
 # Write to SI folder
 write.csv(B12_table, 
-          file = here("Fig_S5-S7/CMA_NewPhytologist_B12_table_TMT_17052025.csv"))
+          file = here("Table_S5-S7/CMA_NewPhytologist_B12_table_TMT_17052025.csv"))
 
 
 # Temp table
@@ -139,7 +141,7 @@ temp_table <- filter(frag_kegg_final, DE_origin == "temp", PValue < .05) |>
 
 temp_table[is.na(temp_table)] <- "-"
 
-write.csv(temp_table, file =  here("Fig_S5-S7/CMA_NewPhytologist_temp_table_TMT_17052025.csv"))
+write.csv(temp_table, file =  here("Table_S5-S7/CMA_NewPhytologist_temp_table_TMT_17052025.csv"))
 
 #Int table
 int_table <- filter(frag_kegg_final, DE_origin == "int", PValue < .05) |> 
@@ -153,7 +155,7 @@ int_table <- filter(frag_kegg_final, DE_origin == "int", PValue < .05) |>
 
 int_table[is.na(int_table)] <- "-"
 
-write.csv(int_table,  here("Fig_S5-S7/CMA_NewPhytologist_int_table_TMT_17052025.csv"))
+write.csv(int_table,  here("Table_S5-S7/CMA_NewPhytologist_int_table_TMT_17052025.csv"))
 
 
 
@@ -161,7 +163,7 @@ write.csv(int_table,  here("Fig_S5-S7/CMA_NewPhytologist_int_table_TMT_17052025.
 sum(!complete.cases(frag_kegg_final$K_no))/nrow(frag_kegg_final)
 
 # Load in annotation text at KEGG levels
-kegg_annotation <- read.csv(here("Fig_3/Fig_3_raw_data/KEGG2.csv")) |> 
+kegg_annotation <- read.csv(here("Fig_03/Fig_03_RAW/KEGG2.csv")) |> 
   # Rename column to match
   rename("K_no" = "KO")
 
@@ -189,7 +191,7 @@ kegg_annotated <- left_join(frag_kegg_final, kegg_annotation, by = "K_no") |>
   mutate(A = ifelse(is.na(A), 
                     'Unknown', A))
 
-write.csv(kegg_annotated, here("Fig_3/Fig_3_output_tables/kegg_annotated_17052025.csv"))
+write.csv(kegg_annotated, here("Fig_03/Fig_03_output_tables/kegg_annotated_17052025.csv"))
 
 
 # Barchart for DE'd proteins showing dist of functional annotations -------------------------------------------------
@@ -264,17 +266,17 @@ B12_plot <- ggplot(counts_df_B12,
   ylab("Functional Annotation") +
   xlab(NULL) +
   scale_y_discrete(limits = rev(levels(counts_df_B12$B))) +
-  scale_fill_manual("Pathway", values = cols) +
+  scale_fill_manual("Pathway", 
+                    values = cols,
+                    na.translate = FALSE) +
   geom_text(aes(label= num_labels_b12),
             position=position_dodge(width=0.9),
             hjust=-.45, 
-            size = 8) +
-  theme(axis.text.y = element_text(size = 33),
-        axis.title.y = element_text(size = 38, vjust = 5)) + 
-  theme(text = element_text(size = 20), legend.position = "none", 
-        #axis.text.y =element_blank()
-        ) +
-  theme(plot.margin = unit(c(3, 0, 3, 3), "cm")) +
+            size = 5) +
+  theme(axis.title.y = element_text(size = 18),
+        axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 10),
+        legend.position = "none") +
   xlim(0,10) 
 
 
@@ -330,20 +332,22 @@ temp_plot <- ggplot(counts_df_temp, aes(y = B,
   ylab(NULL) +
   xlab(NULL) +
   scale_y_discrete(limits = rev(levels(counts_df_temp$B))) +
-  scale_fill_manual("Pathway", values = cols) +
+  scale_fill_manual("Pathway", 
+                    values = cols,
+                    na.translate = FALSE) +
   geom_text(
     aes(label = num_labels_temp),
     position = position_dodge(width = 0.9),
     hjust = -.45,
-    size = 8) +
-  theme(plot.title = element_text(size = 20)) +
-  theme(text = element_text(size = 20), axis.text.y = element_blank()) +
+    size = 5) +
+  theme(plot.title = element_text(size = 20),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 10)) +
   xlim(0, 10) +
-  theme(plot.margin = unit(c(3, 0, 3, 0), "cm"))
+  theme( #plot.margin = unit(c(3, 0, 3, 0), "cm"),
+        legend.position = "none")
 
-# FIXME
-# Save size natively 
-# ggsave("temp_annotation.pdf", width = 24, height = 18, units = "in")
 
 # INT Plot -------------------------------------------------
 
@@ -403,73 +407,67 @@ int_plot <- ggplot(counts_df_int, aes(y = B, x = n, fill = A)) +
   xlab(NULL) +
   xlim(0,30) +
   scale_y_discrete(limits = rev(levels(counts_df_int$B))) +
-  scale_fill_manual("Pathway", values = cols) +
+  scale_fill_manual("Pathway", 
+                    values = cols,
+                    na.translate = FALSE) +
   geom_text(aes(label= num_labels_int), position=position_dodge(width=0.9), 
-            hjust=-.45, size = 8) +
+            hjust=-.45, size = 5) +
   theme(plot.title = element_text(size = 20)) + 
-  theme(text = element_text(size=20), 
-        axis.text.y =element_blank()
-        ) +
-  theme(plot.margin = unit(c(3, 0, 3, 0), "cm"), legend.position = "none") 
+  theme(plot.title = element_text(size = 20),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 10)) +
+  theme(#plot.margin = unit(c(3, 0, 3, 0), "cm"), 
+    legend.position = "none") 
 
 
 
   
-#Make a plot with just x-axis text
-annotation_barplot <- ggarrange(B12_plot,
-                                temp_plot,
-                                int_plot, 
-                                ncol = 3, 
-                                nrow = 1,
-                                common.legend = TRUE) + 
-  rremove("ylab") + 
-  rremove("xlab")
-
-
 # Multipanel plot ---------------------------------------------------------
 
 # Annotations for plot labels 
-ann1 <- geom_text(aes(x = 0, 
-                      y = 0, 
-                      label = "-B[12]"),
-                  parse = TRUE, 
-                  size = 6)
+ann1 <- ggplot() +
+  geom_text(aes(x = 5, y = 0, 
+                label = "-B[12]"),
+            parse = TRUE,
+            size = 6,
+            hjust = -2.9) +
+  theme_void()
 
-ann2 <- geom_text(aes(x = 0, 
-                      y = 0, 
-                  label = "+12 °C)"),
-                  parse = TRUE, 
-                  size = 6)
+ann2 <- ggplot() +
+  geom_text(aes(x = 0, y = 0, 
+                label = "'+12 °C'"),
+            parse = TRUE,
+            size = 6) +
+  theme_void()
 
-ann3 <- geom_text(aes(x =0,
-                      y = 0, 
-                      label = "-B[12] and +12 °C)"),
-                  parse = TRUE, 
-                  size = 6)
+ann3 <-  ggplot() +
+  geom_text(aes(x = 0, y = 0, 
+                label = "-B[12]*' and +12 °C'"),
+            parse = TRUE,
+            size = 6)  +
+  theme_void()
 
 # Arrange plots
-# FIXME labels not rendering 
-# Caused by error in `.f()`:
 ggarrange(
+  ann1, 
+  ann2,
+  ann3,
   B12_plot,
   temp_plot,
   int_plot,
-  ann1, # cannot convert to grob?? >:(
-  ann2, 
-  ann3,
-  nrow = 2, 
+  nrow = 2,
   ncol = 3,
-    # label.x = c(.75, .5, .5),
-    # label.y = .975,
-    common.legend = TRUE,
-    widths = c(3.7, 1, 3),
-    legend = "bottom"
-  ) 
+  common.legend = TRUE,
+  widths = c(2.5, 1, 3, 2.5, 1, 3),
+  heights = c(.05,  1),
+  legend = "bottom"
+) 
 
 
-
-ggsave(here("Fig_3/Fig_3_plots/annotation_barchart_17052025.pdf"), 
-       width = 35, 
-       height = 18, 
+# save plot
+ggsave(here("Fig_03/Fig_03_annotation_barchart.pdf"), 
+       width = 15, 
+       height = 6, 
        units = "in", 
        limitsize = FALSE)
