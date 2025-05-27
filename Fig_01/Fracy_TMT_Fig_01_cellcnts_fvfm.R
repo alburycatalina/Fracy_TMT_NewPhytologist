@@ -10,8 +10,11 @@ library(ggpubr)
 
 # Cell Count Data Cleaning ------------------------------------------------
 
+here::i_am("Fig_01/Fracy_TMT_Fig_01_cellcnts_fvfm.R")
+
+
 # Clean cell cnt data
-cell_cnts <- read.csv(here("Fig_1/cell_cnt_raw.csv")) |> 
+cell_cnts <- read.csv(here("Fig_01/cell_cnt_raw.csv")) |> 
   
   # exclude 96 hour data 
   # lack of new media makes 4deg start to decline
@@ -111,10 +114,10 @@ cellcnts_stats_output <- sapply(hours, cell_cnt_ttest, df = cell_cnts)  |>
 # Clean up fv/fm data -----------------------------------------------------
 
 # Read in table with sample treatment info 
-sample_treat <- read.csv(here("Fig_1/sample_treatments.csv"))
+sample_treat <- read.csv(here("Fig_01/sample_treatments.csv"))
 
 # Read in and clean fvfm data 
-fvfm <- read.csv(here("Fig_1/fvfm_raw.csv")) |>
+fvfm <- read.csv(here("Fig_01/fvfm_raw.csv")) |>
   rename(c( # fix column headers
     "sample_ID" = "Sample",
     "Hour" = "h",
@@ -187,7 +190,7 @@ barplots <- ggarrange(
 
 # Export plot
 ggsave(barplots, 
-       filename = "cellcnt_fvfm_barplot.pdf",  
+       filename = "Fig_01_cellcnts_fvfm_barplot.pdf",  
        bg = "transparent", 
        width = 15,
        height = 9)
