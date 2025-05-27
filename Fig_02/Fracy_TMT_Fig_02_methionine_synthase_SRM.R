@@ -13,14 +13,14 @@ library(here)
 library(forcats)
 
 # Declare file locations with `here`
-here::i_am("Fig_2/Fracy_TMT_Fig_2_methionine_synthase_SRM.R")
+here::i_am("Fig_02/Fracy_TMT_Fig_02_methionine_synthase_SRM.R")
 
 
 
 # Protein Quota Calculations ----------------------------------------------------------
 
 # Load in cell counts
-cell_cnt_data <- read.csv(here("Fig_1/cell_cnt_raw.csv")) |> 
+cell_cnt_data <- read.csv(here("Fig_01/Fig_01_RAW/cell_cnt_raw.csv")) |> 
   filter(time_since_temp_hours == 24) |> # hour 24 is time of harvest 
   select(Sample, B12, Temperature, Treatment, cells_mL) |>
   mutate(Sample = substring(Sample, 5)) |>   # remove cell numbers 
@@ -30,7 +30,7 @@ cell_cnt_data <- read.csv(here("Fig_1/cell_cnt_raw.csv")) |>
 # Use BCA run to find the concentration of the protein before digestion for MS 
 prot_quota_df <- 
   read.csv(here(
-  "Fig_2/Fig_2_Raw_data/BCA1.1_05062019_a.txt_dilution25.csv")) |> # load in protein BCA data 
+  "Fig_02/Fig_02_RAW/BCA1.1_05062019_a.txt_dilution25.csv")) |> # load in protein BCA data 
   select(sample_id, ug_extracted_total) |>
   mutate(
     sample_id = c(
@@ -61,14 +61,14 @@ prot_quota_df <-
                       labels = c("+B12", "-B12")))
 
 # Write protein quota data 
-write.csv(prot_quota_df, file = here("Fig_2/Fig_2_protein_quota_data/prot_quota_df.csv"), 
+write.csv(prot_quota_df, file = here("Fig_02/Fig_02_protein_quota_data/prot_quota_df.csv"), 
           row.names = FALSE)
 
 
 # Protein SRM Calculations ------------------------------------------------
 
 # Calculate pmol/ug total protein and molecules per cell of analytes from SRM
-targeted_data_raw <- read.csv(here('Fig_2/Fig_2.csv')) |> # Load in protein data
+targeted_data_raw <- read.csv(here('Fig_02/Fig_02.csv')) |> # Load in protein data
   
   rename(sample_id = Harvest_ID) |> 
   
@@ -117,7 +117,7 @@ targeted_dataraw_treatsum <- targeted_data_raw_repsum |>
                    treatsd_pmolAnalyte_ugProtein = sd(repmean_pmolAnalyte_ugProtein))
 
 write.csv(targeted_dataraw_treatsum, 
-          file = here("Fig_2/Fig_2_protein_quota_data/targeted_dataraw_treatsum.csv"), 
+          file = here("Fig_02/Fig_02_protein_quota_data/targeted_dataraw_treatsum.csv"), 
           row.names = FALSE)
 
 
@@ -162,7 +162,7 @@ targeted_data <- targeted_data_raw |>
   ))
 
 
-# MetH/MetE Boxplots -------------------------------------------------------------------
+# Boxplots MetH/MetE -------------------------------------------------------------------
 
 # Color palette 
 col_12 <- c("#92C5DE", "#B2182B" )
@@ -335,7 +335,7 @@ ggarrange(metH_quota_picomol,
                             color = "black"))
 
 # No 
-ggsave(here("Fig_2/Fig_2_meth_mete_barplots.png"), 
+ggsave(here("Fig_02/Fig_02_meth_mete_barplots.png"), 
        width = 12,
        height = 12, 
        units = "in")
