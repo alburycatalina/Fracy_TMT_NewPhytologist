@@ -1,6 +1,6 @@
 # This script creates figure 8
 
-kegg_annotated <- read.csv(here("Fig_3/Fig_3_output_tables/kegg_annotated_17052025.csv"))
+kegg_annotated <- read.csv(here("Fig_03/Fig_03_output_tables/kegg_annotated_17052025.csv"))
 
 
 # Plot for B12 ------------------------------------------------------------
@@ -238,7 +238,7 @@ plot <- ggarrange(b12_scatter,
                   legend = "bottom")
 
 ggsave(plot, 
-       filename = here("Fig_8/DE_scatter_17052025.png"),  
+       filename = here("Fig_08/Fig_08_DEScatter.png"),  
        bg = "transparent", 
        width = 16, 
        height= 7, 
