@@ -11,6 +11,7 @@ library(gplots)
 library(stringr)
 library(pheatmap)
 library(sjmisc)
+library(here)
 
 here::i_am("Fig_04-07/Fig_04-07_heatmaps.R")
 
@@ -37,25 +38,37 @@ norm_data <- read.csv(here('Fracy_TMT_Normalization/PD1_Norm_11072021.csv')) |>
 
 # Load 3 toptags B12 hits from DE analysis pairwise comparisons
 hits_4_noB12  <- read.csv(here('Fracy_TMT_DifferentialExpression/hits_4_noB12_20102021.csv'))
-hits_12_B12 <- read.csv('Fracy_TMT_DifferentialExpression/hits_12_B12_20102021.csv')
-hits_12_noB12  <- read.csv('Fracy_TMT_DifferentialExpression/hits_12_noB12_20102021.csv')
+hits_12_B12 <- read.csv(here('Fracy_TMT_DifferentialExpression/hits_12_B12_20102021.csv'))
+hits_12_noB12  <- read.csv(here('Fracy_TMT_DifferentialExpression/hits_12_noB12_20102021.csv'))
 
 
 
 # B12 Heatmap -------------------------------------------------------------
 
 # Filter out significant B12 hits
-hits_4_noB12_sigonly  <- hits_4_noB12 |> filter(PValue < .01)
-
-# Change accession cols to character type
-hits_4_noB12_sigonly$accession <- as.character(hits_4_noB12_sigonly$accession)
+hits_4_noB12_sigonly  <- hits_4_noB12 |> filter(PValue < .01) |> 
+  # change accession cols to character type
+  mutate(accesssion = as.character(accession)) 
 
 # Match hits to normalized data by accession #'s
 hits_sig_joined_B12 <- inner_join(hits_4_noB12_sigonly,  norm_data,
                                   by=c("accession" = "accession"))
 
 # Remove unwanted col's (anything but count data)
-heatmap_hits_B12 <- as.matrix(dplyr::select(hits_sig_joined_B12, B12_4_1_A, B12_4_2_B, B12_4_3_B, B12_12_1_B, B12_12_3_A, noB12_4_1_A, noB12_4_2_B, noB12_12_2_B, noB12_12_3_A))
+heatmap_hits_B12 <- as.matrix(
+  dplyr::select(
+    hits_sig_joined_B12,
+    B12_4_1_A,
+    B12_4_2_B,
+    B12_4_3_B,
+    B12_12_1_B,
+    B12_12_3_A,
+    noB12_4_1_A,
+    noB12_4_2_B,
+    noB12_12_2_B,
+    noB12_12_3_A
+  )
+)
 
 
 # Make row names from accession column in hits_sig_joined
@@ -64,7 +77,6 @@ rownames(heatmap_hits_B12) = make.names(hits_sig_joined_B12$accession, unique=TR
 
 
 # Scale heatmap hits to remove long tail issues (https://stackoverflow.com/questions/21983162/how-to-expand-the-dendogram-in-heatmap-2)
-
 heatmap_hits_scaled_B12 <- t(scale(t(heatmap_hits_B12))) 
 
 # set custom distance and clustering functions
