@@ -30,7 +30,7 @@ fracy_metemeth_quotas <- read.csv(here("Fig_02/Fig_02_protein_quota_data/targete
   )
 
 # Load in data from Bertrand et al 2013 (P. trich and environmental)
-Bertrand2013_metemeth_quotas <- read.csv(here("Fig_10/Bertrand2013_protquotas.csv"))
+Bertrand2013_metemeth_quotas <- read.csv(here("Fig_09/Bertrand2013_protquotas.csv"))
 
 # Bind two df's 
 prot_comp_df <- rbind(fracy_metemeth_quotas, Bertrand2013_metemeth_quotas) |> 
@@ -38,7 +38,7 @@ prot_comp_df <- rbind(fracy_metemeth_quotas, Bertrand2013_metemeth_quotas) |>
          levels = c("MetH", "MetE")))
 
 
-write.csv(prot_comp_df, file = here("Fig_10/prot_quota_comp.csv"))
+write.csv(prot_comp_df, file = here("Fig_09/prot_quota_comp.csv"))
 
 # color palette for plot
 b12_palette <- met.brewer("Hokusai1", 5)
@@ -100,7 +100,7 @@ prot_comp_plot <- ggplot(
   )
 
 ggsave(prot_comp_plot, 
-       file = here("Fig_10/Fig_10_protcomp_Bertrand2013.pdf"),  
+       file = here("Fig_09/Fig_09_protcomp_Bertrand2013.pdf"),  
        bg = "transparent",
        width = 14, 
        height = 9)
