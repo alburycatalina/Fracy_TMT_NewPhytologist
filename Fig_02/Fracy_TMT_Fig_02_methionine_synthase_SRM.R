@@ -89,8 +89,8 @@ targeted_data_raw <- read.csv(here('Fig_02/Fig_02.csv')) |> # Load in protein da
   
   # Calculate molecules per cell 
   mutate(pmolAnalyte_cell = pmolAnalyte_ugProtein * ugTotalProt_cell, 
-         molAnalyte_cell = pmolAnalyte_cell * 10^15, 
-         
+         molAnalyte_cell = pmolAnalyte_cell / 10^12, 
+         attomolAnalyte_cell = molAnalyte_cell/ 1E-18,
          # Multiply by avagadro's number for molecules
          moleculesAnalyte_cell = molAnalyte_cell * 6.022E23)
   
@@ -134,18 +134,25 @@ targeted_data <- targeted_data_raw |>
                 B12,
                 Temperature,
                 pmolAnalyte_ugProtein,
-                moleculesAnalyte_cell) |>
+                moleculesAnalyte_cell, 
+                molAnalyte_cell,
+                attomolAnalyte_cell) |>
   
   # Convert to a wide format for plotting
   pivot_wider(
-    values_from = c(pmolAnalyte_ugProtein, moleculesAnalyte_cell),
+    values_from = c(pmolAnalyte_ugProtein, moleculesAnalyte_cell, molAnalyte_cell, attomolAnalyte_cell),
     names_from = Protein,
     names_glue = "{Protein}_{.value}"
   ) |>
   
   # Fold change calculations
   mutate(
-    fc = (MetE_pmolAnalyte_ugProtein - MetH_pmolAnalyte_ugProtein) / MetH_pmolAnalyte_ugProtein
+    MetH_molesAnalyte_cell = MetH_moleculesAnalyte_cell / 6.022E23,
+    MetE_molesAnalyte_cell = MetE_moleculesAnalyte_cell / 6.022E23,
+    MetH_femtomolesAnalyte_cell = MetH_molesAnalyte_cell / 1E15,
+    MetE_femtomolesAnalyte_cell = MetE_molesAnalyte_cell / 1E15,
+    fc = (MetE_pmolAnalyte_ugProtein - MetH_pmolAnalyte_ugProtein) / MetH_pmolAnalyte_ugProtein,
+    
   ) |>
   
   # Set up levels for plotting
@@ -245,11 +252,11 @@ metE_quota_picomol <- ggplot(
 
 
 # MetH Plot
-metH_quota_molecules <- ggplot(
+metH_quota_attomol_cell <- ggplot(
   targeted_data,
   aes(
     x = Temperature,
-    y = MetH_moleculesAnalyte_cell,
+    y = MetH_attomolAnalyte_cell,
     grouping = Treatment,
     fill = Temperature,
     alpha = B12 # Make B12 dictate the transparency 
@@ -275,7 +282,7 @@ metH_quota_molecules <- ggplot(
   
   # Labels
   labs(
-    y = bquote('Molecules MetH cell' ^ -1) , # ilu unicode characters <3 
+    y = bquote('Attomoles MetH cell' ^ -1) , # ilu unicode characters <3 
     x = "Treatment",
     fill = 'Temperature (°C)',
     alpha = expression("B"[12])
@@ -289,15 +296,14 @@ metH_quota_molecules <- ggplot(
                alpha = c(.25, 1)), 
     colour = NA
   ))) +
-  theme(axis.text.x = element_blank(), axis.ticks = element_blank()) +
-  ylim(0, 3e32)
+  theme(axis.text.x = element_blank(), axis.ticks = element_blank()) 
 
 # MetE Plot
-metE_quota_molecules <- ggplot(
+metE_quota_attomol_cell <- ggplot(
   targeted_data,
   aes(
     x = Temperature,
-    y = MetE_moleculesAnalyte_cell,
+    y = MetE_attomolAnalyte_cell,
     grouping = Treatment,
     fill = Temperature,
     alpha = B12
@@ -309,7 +315,7 @@ metE_quota_molecules <- ggplot(
   scale_fill_manual(values = col_12, labels = c("4", "12")) +
   scale_alpha_manual(values = c(1, .25), labels = c("+", "-")) +
   labs(
-    y = bquote('Molecules MetE cell' ^ -1) ,
+    y = bquote('Attomoles MetE cell' ^ -1) ,
     x = "Treatment",
     fill = 'Temperature (°C)',
     alpha = expression("B"[12])
@@ -317,30 +323,27 @@ metE_quota_molecules <- ggplot(
   guides(alpha = guide_legend(override.aes = list(
     fill = hcl(c(15, 195), 100, 0, alpha = c(0.25, 1)), colour = NA
   ))) +
-  theme(axis.text.x = element_blank(), axis.ticks = element_blank()) +
-  ylim(0, 3e32)
+  theme(axis.text.x = element_blank(), axis.ticks = element_blank())
 
 
 # Arrange MetH/MetE Boxplots
-ggarrange(metH_quota_picomol, 
-          metE_quota_picomol,
-          metH_quota_molecules,
-          metE_quota_molecules,
+ggarrange(metH_quota_attomol_cell,
+          metE_quota_attomol_cell,
           ncol = 2,
-          nrow = 2, 
+          nrow = 1, 
           common.legend = TRUE, 
           legend = "bottom", 
-          labels = c("a", "b", "c", "d"),  
+          labels = c("a", "b"),  
           font.label = list(size = 25, 
                             color = "black"))
 
 # No 
 ggsave(here("Fig_02/Fig_02_meth_mete_barplots.png"), 
        width = 12,
-       height = 12, 
+       height = 6, 
        units = "in")
 
-# t-test on MetH ------------------------------------------------------
+ # t-test on MetH ------------------------------------------------------
 
 # Temp MetH - not sig (p = 0.08816)
 t.test({targeted_data |> 
