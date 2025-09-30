@@ -1,6 +1,15 @@
 # This script creates figure 8
 
-kegg_annotated <- read.csv(here("Fig_03/Fig_03_output_tables/kegg_annotated_17052025.csv"))
+# load libraries
+library(wesanderson)
+library(ggrepel)
+library(ggpubr)
+
+
+# set directory location 
+here::i_am("Fig_08/Fracy_TMT_Fig_08-DEScatter.R")
+
+kegg_annotated <- read.csv(here("./Fig_03/Fig_03_output_tables/kegg_annotated_17052025.csv"))
 
 
 # Plot for B12 ------------------------------------------------------------
