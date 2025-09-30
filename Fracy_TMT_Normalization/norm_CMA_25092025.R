@@ -362,6 +362,9 @@ PD1_Norm <- sl_irs_tmm_normalization(
   tmt_common_channel_names = list(c("pool2_A"), c("pool1_B", "pool2_B"))
 )
 
+pdf(file = here("../Fig_S4/Fig_S4.pdf"), width = 12, height = 6)
+
+dev.off()
 
 # Add back in accessions etc. 
 PD1_Norm_final <-  cbind(
