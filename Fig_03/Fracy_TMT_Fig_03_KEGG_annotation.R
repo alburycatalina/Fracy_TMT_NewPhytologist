@@ -82,7 +82,7 @@ KEGGlist_frag <- readRDS(here("Fig_03/Fig_03_RAW", "KEGGlist_frag.rds"))
 
 
 
-# FIXME source for these matching KEGG numbers?
+# matching KEGG numbers?
 frag_kegg_nos_raw <- read.csv(here("Fig_03/Fig_03_RAW/frag_kegg_no.csv"))
 
 # Parse columns by separators
@@ -122,7 +122,9 @@ B12_table <- filter(frag_kegg_final, DE_origin == "B12", PValue < .05) |>
          K_no, 
          logFC, 
          logCPM, 
-         PValue)
+         PValue) |> 
+  rename(log2_FoldChange = logFC,
+         log2_NormAbundance = logCPM)
 
 # Write to SI folder
 write.csv(B12_table, 
@@ -151,7 +153,9 @@ int_table <- filter(frag_kegg_final, DE_origin == "int", PValue < .05) |>
          K_no, 
          logFC, 
          logCPM, 
-         PValue)
+         PValue) |> 
+  rename(log2_FoldChange = logFC,
+         log2_NormAbundance = logCPM)
 
 int_table[is.na(int_table)] <- "-"
 
@@ -189,7 +193,9 @@ kegg_annotated <- left_join(frag_kegg_final, kegg_annotation, by = "K_no") |>
          H) |> 
   # Change NA's to unknown
   mutate(A = ifelse(is.na(A), 
-                    'Unknown', A))
+                    'Unknown', A)) |> 
+  rename(log2_FoldChange = logFC,
+         log2_NormAbundance = logCPM)
 
 write.csv(kegg_annotated, here("Fig_03/Fig_03_output_tables/kegg_annotated_17052025.csv"))
 
